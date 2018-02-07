@@ -46,26 +46,6 @@ data.study <- read.csv('/Users/Daniel/Documents/Courses X/Statistics in Action/H
 a. test if the mean level of calcium for period 2 is the same for males and females.  </br>**Hint:** plot first the data and justify the test(s) to use.
 
 ```{r}
-# Filter the data was want and remove NA from variable
-calciumSex <- data.study %>% filter(period == 2) %>% select(CALCIUM, sex) %>% na.omit
-
-# Find each sex's mean
-calciumMale <- calciumSex %>% filter(sex == 'M') %>% select(CALCIUM)
-calciumFemale <- calciumSex %>% filter(sex == 'F')
-calciumMean <- as.data.frame(rbind(mean(calciumMale$CALCIUM), mean(calciumFemale$CALCIUM)))
-calciumMean <- as.data.frame(cbind(calciumMean, rbind('M', 'F')))
-colnames(calciumMean) <- c('mean', 'sex')
-
-# Plot the data
-ggplot() + 
-  geom_point(data = calciumSex, aes(x = CALCIUM, y = sex, colour = sex)) + 
-  geom_point(data = calciumMean, aes(x = mean, y = sex, color = sex, size = 4, alpha = .5), show.legend = F)
-
-# Let's take a look at the means
-calciumMean
-```
-
-```{r}
 #Splitting the dataset into the two periods 
 data.study.p1 <- data.study %>% filter(period == 1)
 data.study.p2 <- data.study %>% filter(period == 2)
@@ -100,34 +80,52 @@ x <- data.study[data.study$sex=="M","CALCIUM"]
 y <- data.study[data.study$sex=="F","CALCIUM"]
 t.test(x,y, conf.level=1-alpha)
 ```
-Since the p-value is very small, we can reject the H0 and say that the means of the control males and females is different
+Since the p-value is very small, we can reject the H0 and say that the means of the control males and females is different.
 
      b. test for the males if the mean level of calcium is the same for period 1 and period 2.
+Here we split the original dataset into the males for period 1 and period 2 and keep only the calcium column in order to do our t-test. Since the population is similar we set the variance of the two samples to be equal
+```{r}
+x <- data.study %>% filter(sex == 'M', period == '1') %>% select('CALCIUM', 'sex')
+y <- data.study %>% filter(sex == 'M', period == '2') %>% select('CALCIUM', 'sex')
+
+aggregate(x$CALCIUM ~ x$sex, FUN= "sd" )
+aggregate(y$CALCIUM ~ y$sex, FUN= "sd" )
+
+
+t.test(x$CALCIUM,y$CALCIUM, conf.level = 1-alpha, var.equal = TRUE)
+```
+
+
 ```{r}
 x <- data.study.p2[data.study.p2$sex=="M","CALCIUM"]
 y <- data.study.p1[data.study.p1$sex=="M","CALCIUM"]
 t.test(x,y, conf.level = 1-alpha, var.equal = TRUE)
 ```
-          Since the p-value is very small, we can reject the H0 and say that the means of the control males in period 1 and period 2 is different
+Since the p-value is very small, we can reject the H0 and say that the means of the control males in period 1 and period 2 is different
 
      c. test for the males if the mean level of calcium for period 2 is the same for the control group and the MON810 group.
 ```{r}
-data.study.cont <- data.study %>% filter(sex == 'M') %>% filter(regimen == 'control')
-data.study.MON810 <- data.study %>% filter(sex == 'M') %>% filter(regimen == 'MON810')
+data.study.cont <- data.study %>% filter(sex == 'M',regimen == 'control')
+data.study.MON810 <- data.study %>% filter(sex == 'M',regimen == 'MON810') 
 t.test(data.study.cont$CALCIUM, data.study.MON810$CALCIUM, conf.level = 1-alpha)
 ```
-Here we assume the variance is different for each group (aka the default setting). As we can see the p-value is very high, so we do not reject the H0, so the means are the same.
+Here we assume the variance is different for each group (aka the default setting of the t.test function). As we can see the p-value is very high, so we do not reject the H0, so the means are the same.
 
-     e. What is the probability to detect a difference of 1 sd (one standard deviation) with only 10 animals per group? with 20 animal? How can we ensure to detect such difference with a probability of 80%?
+d. What is the probability to detect a difference of 1 sd (one standard deviation) with only 10 animals per group? with 20 animal? How can we ensure to detect such difference with a probability of 80%?
+```{r}
+
+```
+
+
      
 ```{r}
 #std.er <- sqrt((std.er(data.study.cont$CALCIUM)/10)+(std.er(data.study.MON810$CALCIUM)/10))
 ```
      
      
-     f. Test for the males if the mean levels of calcium for period 2 of the control group and the MON810 are equivalent. The equivalence limits will be defined using the 6 reference groups as *i)* one standard deviation of the 6 reference means, *ii)* two standard deviations of the 6 reference means.
+     e. Test for the males if the mean levels of calcium for period 2 of the control group and the MON810 are equivalent. The equivalence limits will be defined using the 6 reference groups as *i)* one standard deviation of the 6 reference means, *ii)* two standard deviations of the 6 reference means.
      
-     g. Summarize and comment these results.
+     f. Summarize and comment these results.
    
    2. Do the same analysis with the variable "DIRBILI" (direct bilirubin)
 
