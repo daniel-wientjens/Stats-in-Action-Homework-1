@@ -1,0 +1,143 @@
+---
+title: "Statistics in Action - case study 1"
+author: "Toxicity assessment of the MON810 maize"
+output:
+  html_document:
+    fig_height: 3
+    fig_width: 8
+    number_sections: yes
+    toc: no
+  pdf_document:
+    fig_height: 3
+    fig_width: 8
+    includes:
+      before_body: macros.tex
+    keep_tex: yes
+    number_sections: yes
+    toc: no
+---
+
+
+```{r}
+library(dplyr)
+library(ggplot2)
+```
+
+</br>
+
+
+# Introduction
+
+The dataset <ttt>dataMON810_2018.csv</ttt> consists of several measurements made during a subchronic toxicity study concerning the MON810 maize.
+
+Biochemical parameters reflecting most physiological functions were measured two times (week 5 and 14), in particular through serum and urine chemistry, and hematology. Organ weights were measured at week 14.
+
+The main objective of this study is to evaluate possible GMO effects on these parameters.
+
+# Single comparison
+
+   1. We consider the variable "CALCIUM".
+First we load the data and omit the missing observation 
+```{r}
+data.study <- read.csv('/Users/Daniel/Documents/Courses X/Statistics in Action/Homework 1/dataMON810_2018.csv') 
+```
+   
+
+a. test if the mean level of calcium for period 2 is the same for males and females.  </br>**Hint:** plot first the data and justify the test(s) to use.
+
+```{r}
+# Filter the data was want and remove NA from variable
+calciumSex <- data.study %>% filter(period == 2) %>% select(CALCIUM, sex) %>% na.omit
+
+# Find each sex's mean
+calciumMale <- calciumSex %>% filter(sex == 'M') %>% select(CALCIUM)
+calciumFemale <- calciumSex %>% filter(sex == 'F')
+calciumMean <- as.data.frame(rbind(mean(calciumMale$CALCIUM), mean(calciumFemale$CALCIUM)))
+calciumMean <- as.data.frame(cbind(calciumMean, rbind('M', 'F')))
+colnames(calciumMean) <- c('mean', 'sex')
+
+# Plot the data
+ggplot() + 
+  geom_point(data = calciumSex, aes(x = CALCIUM, y = sex, colour = sex)) + 
+  geom_point(data = calciumMean, aes(x = mean, y = sex, color = sex, size = 4, alpha = .5), show.legend = F)
+
+# Let's take a look at the means
+calciumMean
+```
+
+```{r}
+#Splitting the dataset into the two periods 
+data.study.p1 <- data.study %>% filter(period == 1)
+data.study.p2 <- data.study %>% filter(period == 2)
+
+#Splitting the dataset of period 2 into male and female and plotting the result
+data.study.p2.m <- data.study.p2 %>% filter(sex == 'M')
+data.study.p2.f <- data.study.p2 %>% filter(sex == 'F')
+
+ggplot()+
+  geom_point(data = data.study.p2.m, aes(x=sex, y=CALCIUM, colour = 'blue'), show.legend = F) + 
+  geom_point(data = data.study.p2.f, aes(x=sex, y=CALCIUM, colour = 'red'), show.legend = F)
+```
+
+```{r}
+par(mfrow = c(1, 2))
+hist(data.study.p2.f$CALCIUM, main='Histogram of calcium for females')
+hist(data.study.p2.m$CALCIUM, main='Histogram of calcium for male')
+```
+As we can see the variances are different, while we want to check whether the means of males and females differ.
+```{r}
+aggregate(data.study.p2$CALCIUM ~ data.study.p2$sex, FUN= "sd" )
+```
+```{r}
+alpha<-0.05
+x <- data.study[data.study$sex=="M","CALCIUM"]
+y <- data.study[data.study$sex=="F","CALCIUM"]
+t.test(x$CALCIUM,y$CALCIUM, conf.level=1-alpha)
+```
+Since the p-value is very small, we can reject the H0 and say that the means of the control males and females is different
+
+     b. test for the males if the mean level of calcium is the same for period 1 and period 2.
+```{r}
+x <- data.study.p2[data.study.p2$sex=="M","CALCIUM"]
+y <- data.study.p1[data.study.p1$sex=="M","CALCIUM"]
+t.test(x$CALCIUM,y$CALCIUM, conf.level = 1-alpha, var.equal = TRUE)
+```
+          Since the p-value is very small, we can reject the H0 and say that the means of the control males in period 1 and period 2 is different
+
+     
+     c. test for the males if the mean level of calcium for period 2 is the same for the control group and the MON810 group.
+```{r}
+data.study.cont <- data.study %>% filter(sex == 'M') %>% filter(regimen == 'control')
+data.study.MON810 <- data.study %>% filter(sex == 'M') %>% filter(regimen == 'MON810')
+t.test(data.study.cont$CALCIUM, data.study.MON810$CALCIUM, conf.level = 1-alpha)
+```
+Here we assume the variance is different for each group (aka the default setting). As we can see the p-value is very high, so we do not reject the H0, so the means are the same.
+
+     e. What is the probability to detect a difference of 1 sd (one standard deviation) with only 10 animals per group? with 20 animal? How can we ensure to detect such difference with a probability of 80%?
+     
+```{r}
+
+std.er <- sqrt((std.er(data.study.cont$CALCIUM)/10)+(std.er(data.study.MON810$CALCIUM)/10))
+```
+     
+     
+     f. Test for the males if the mean levels of calcium for period 2 of the control group and the MON810 are equivalent. The equivalence limits will be defined using the 6 reference groups as *i)* one standard deviation of the 6 reference means, *ii)* two standard deviations of the 6 reference means.
+     
+     g. Summarize and comment these results.
+   
+   2. Do the same analysis with the variable "DIRBILI" (direct bilirubin)
+
+
+
+</br>
+
+
+# Multiple comparisons
+
+
+   1. Redo the three tests of the previous section (questions a., b. and c.) for now comparing  the means of all the quantitative variables (see the annex 5 of the ANSES report <ttt>BIOT2009sa0285Ra.pdf</ttt> to know the type of each variable). Store the results (i.e. all the p-values) in a dataframe with one variable per row and four columns (name of the variable + three p-values). 
+   
+   2. For each of the three tests, adjust the p-values using the Bonferroni  and the Benjamini-Hochberg corrections. How can we interpret these results?
+   
+
+
