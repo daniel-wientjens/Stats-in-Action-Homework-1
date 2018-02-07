@@ -19,7 +19,7 @@ output:
 ```{r}
 if (!require("pacman")) install.packages("pacman")
 
-pacman::p_load(dplyr, ggplot2)
+pacman::p_load(dplyr, ggplot2, tidyverse)
 ```
 
 </br>
@@ -36,10 +36,9 @@ The main objective of this study is to evaluate possible GMO effects on these pa
 # Single comparison
 
    1. We consider the variable "CALCIUM".
-First we load the data and omit the missing observation 
+First we load the data
 ```{r}
 data.study <- read.csv('/Users/Daniel/Documents/Courses X/Statistics in Action/Homework 1/dataMON810_2018.csv') 
-
 #data.study <- read.csv('https://github.com/daniel-wientjens/Stats-in-Action-Homework-1/blob/master/dataMON810_2018.csv')
 ```
    
@@ -71,23 +70,26 @@ par(mfrow = c(1, 2))
 hist(data.study.p2.f$CALCIUM, main='Histogram of calcium for females')
 hist(data.study.p2.m$CALCIUM, main='Histogram of calcium for male')
 ```
-As we can see the variances are different, while we want to check whether the means of males and females differ.
 ```{r}
 aggregate(data.study.p2$CALCIUM ~ data.study.p2$sex, FUN= "sd" )
 aggregate(data.study.p2$CALCIUM ~ data.study.p2$sex, FUN= "mean" )
 ```
+After all these plot we can see that the means and variances are probably both different between the two groups. However we should not rely on our eyes and do some tests! 
+So first we check whether the variances differ between the male and female polulation by performing an F-test. 
+Lastly we use that result to conduct a T-test since we need to know whether to leave the var.equal at it's default value or to change it to TRUE. 
 ```{r}
 alpha<-0.05
 
 x <- data.study[data.study$sex=="M","CALCIUM"]
 y <- data.study[data.study$sex=="F","CALCIUM"]
 var.test(x,y, alternative = 'two.sided')
-#as we can see here the F-test shows us that the variances of the two populations are not equal
+
 t.test(x,y, conf.level=1-alpha, var.equal = FALSE)
 ```
+As we can see the F-test has pointed out that the variances are different. This is then used in the 
 Since the p-value is very small, we can reject the H0 and say that the means of the control males and females is different.
 
-     b. test for the males if the mean level of calcium is the same for period 1 and period 2.
+     b. Test for the males if the mean level of calcium is the same for period 1 and period 2.
 Here we split the original dataset into the males for period 1 and period 2 and keep only the calcium column in order to do our t-test. Since the population is similar we set the variance of the two samples to be equal.
 ```{r}
 x <- data.study %>% filter(sex == 'M', period == '1') %>% select('CALCIUM', 'sex')
@@ -97,7 +99,6 @@ aggregate(x$CALCIUM ~ x$sex, FUN= "sd" )
 aggregate(y$CALCIUM ~ y$sex, FUN= "sd" )
 
 var.test(x$CALCIUM,y$CALCIUM, alternative = 'two.sided')
-#as we can see here the F-test shows us that the variances of the two populations are not equal
 
 t.test(x$CALCIUM,y$CALCIUM, conf.level = 1-alpha, var.equal = FALSE)
 ```
@@ -105,13 +106,16 @@ t.test(x$CALCIUM,y$CALCIUM, conf.level = 1-alpha, var.equal = FALSE)
 Since the p-value of the Welch Two Sample t-test is very small, we can reject the H0 and say that the means of the control males in period 1 and period 2 is different
 
      c. test for the males if the mean level of calcium for period 2 is the same for the control group and the MON810 group.
+As per usual we split the dataset into the two groups we want to compare, so here we filter them to only contain males from period 2 and have the control group vs the MON810 group.
+Next we perform a F-test to see whether the variances differ between the two groups and use the result for our final t-test.
 ```{r}
-data.study.cont <- data.study %>% filter(sex == 'M',regimen == 'control')
-data.study.MON810 <- data.study %>% filter(sex == 'M',regimen == 'MON810') 
-var.test(data.study.cont$CALCIUM, data.study.MON810$CALCIUM,conf.level = 1-alpha, var.equal = FALSE)
-t.test(data.study.cont$CALCIUM, data.study.MON810$CALCIUM, conf.level = 1-alpha)
+data.study.cont <- data.study %>% filter(sex == 'M', period == '2', regimen == 'control')
+data.study.MON810 <- data.study %>% filter(sex == 'M',period == '2', regimen == 'MON810') 
+var.test(data.study.cont$CALCIUM, data.study.MON810$CALCIUM,conf.level = 1-alpha)
+t.test(data.study.cont$CALCIUM, data.study.MON810$CALCIUM, conf.level = 1-alpha, var.equal = FALSE)
 ```
-Here we first check whether the variances are different for each group with the F-test which tells us that they are different due to the low p-value (0.025). As we can see the p-value of the Welch Two Sample t-test is very high, so we do not reject the H0 there, so the means of the males in period 2 of the control and MON810 group are the same.
+Here we first see that the F-test tells us that the variances are different between the two groups due to the low p-value (0.037) with an alpha of 5%. 
+As we can see the p-value of the Welch Two Sample t-test is very high (0.446), so we do not reject the H0 there. This translates into the fact that the means of the males in period 2 of the control and MON810 group do not differ significantly.
 
 d. What is the probability to detect a difference of 1 sd (one standard deviation) with only 10 animals per group? with 20 animal? How can we ensure to detect such difference with a probability of 80%?
 ```{r}
@@ -125,12 +129,40 @@ d. What is the probability to detect a difference of 1 sd (one standard deviatio
 ```
      
      
-     e. Test for the males if the mean levels of calcium for period 2 of the control group and the MON810 are equivalent. The equivalence limits will be defined using the 6 reference groups as *i)* one standard deviation of the 6 reference means, *ii)* two standard deviations of the 6 reference means.
+     e. Test for the males if the mean levels of calcium for period 2 of the control group and the MON810 are equivalent. The equivalence limits will be defined using the 6 reference groups as 
+     *i)* one standard deviation of the 6 reference means. 
+```{r}
+data.study.cont <- data.study %>% filter(sex == 'M', period == '2', regimen == 'control')
+data.study.MON810 <- data.study %>% filter(sex == 'M',period == '2', regimen == 'MON810') 
+data.study.ref <- data.study %>% filter(sex == 'M',period == '2', regimen != 'control', regimen != 'MON810') %>%  select(regimen, CALCIUM) %>% na.omit
+
+ref <- aggregate(data.study.ref$CALCIUM ~ data.study.ref$regimen, FUN = 'mean')
+
+sd(ref$`data.study.ref$CALCIUM`)
+```
+```{r}
+t.power = function(nsamp=c(10,10),nsim=1000,means=c(0,0),sds=c(1,1)){
+    lower = qt(.025,df=sum(nsamp) - 2)
+    upper = qt(.975,df=sum(nsamp) - 2)
+    ts = replicate(nsim,
+       t.test(rnorm(nsamp[1],mean=means[1],sd=sds[1]),
+              rnorm(nsamp[2],mean=means[2],sd=sds[2]))$statistic)
+
+    sum(ts < lower | ts > upper) / nsim
+}
+
+pt(q = -sd(calciumEMean$CALCIUM), df = dim(calciumE)[1]-6)
+```
+     
+     *ii)* two standard deviations of the 6 reference means.
      
      f. Summarize and comment these results.
    
    2. Do the same analysis with the variable "DIRBILI" (direct bilirubin)
 
+```{r}
+calciumE <- data.study %>% filter(sex == 'M') %>% filter(period == 2, regimen != 'control', regimen != 'MON810') %>% select(regimen, CALCIUM) %>% na.omit
+```
 
 
 </br>
