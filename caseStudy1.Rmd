@@ -78,6 +78,11 @@ ggplot()+
   geom_point(data = data.study.p2.m, aes(x=sex, y=CALCIUM, colour = 'blue'), show.legend = F) + 
   geom_point(data = data.study.p2.f, aes(x=sex, y=CALCIUM, colour = 'red'), show.legend = F)
 ```
+```{r}
+boxplot(CALCIUM ~ sex, data = data.study, col = "blue")
+```
+
+
 
 ```{r}
 par(mfrow = c(1, 2))
@@ -87,12 +92,13 @@ hist(data.study.p2.m$CALCIUM, main='Histogram of calcium for male')
 As we can see the variances are different, while we want to check whether the means of males and females differ.
 ```{r}
 aggregate(data.study.p2$CALCIUM ~ data.study.p2$sex, FUN= "sd" )
+aggregate(data.study.p2$CALCIUM ~ data.study.p2$sex, FUN= "mean" )
 ```
 ```{r}
 alpha<-0.05
 x <- data.study[data.study$sex=="M","CALCIUM"]
 y <- data.study[data.study$sex=="F","CALCIUM"]
-t.test(x$CALCIUM,y$CALCIUM, conf.level=1-alpha)
+t.test(x,y, conf.level=1-alpha)
 ```
 Since the p-value is very small, we can reject the H0 and say that the means of the control males and females is different
 
@@ -100,11 +106,10 @@ Since the p-value is very small, we can reject the H0 and say that the means of 
 ```{r}
 x <- data.study.p2[data.study.p2$sex=="M","CALCIUM"]
 y <- data.study.p1[data.study.p1$sex=="M","CALCIUM"]
-t.test(x$CALCIUM,y$CALCIUM, conf.level = 1-alpha, var.equal = TRUE)
+t.test(x,y, conf.level = 1-alpha, var.equal = TRUE)
 ```
           Since the p-value is very small, we can reject the H0 and say that the means of the control males in period 1 and period 2 is different
 
-     
      c. test for the males if the mean level of calcium for period 2 is the same for the control group and the MON810 group.
 ```{r}
 data.study.cont <- data.study %>% filter(sex == 'M') %>% filter(regimen == 'control')
@@ -116,8 +121,7 @@ Here we assume the variance is different for each group (aka the default setting
      e. What is the probability to detect a difference of 1 sd (one standard deviation) with only 10 animals per group? with 20 animal? How can we ensure to detect such difference with a probability of 80%?
      
 ```{r}
-
-std.er <- sqrt((std.er(data.study.cont$CALCIUM)/10)+(std.er(data.study.MON810$CALCIUM)/10))
+#std.er <- sqrt((std.er(data.study.cont$CALCIUM)/10)+(std.er(data.study.MON810$CALCIUM)/10))
 ```
      
      
