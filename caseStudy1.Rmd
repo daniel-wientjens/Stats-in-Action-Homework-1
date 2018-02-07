@@ -16,11 +16,10 @@ output:
     number_sections: yes
     toc: no
 ---
-
-
 ```{r}
-library(dplyr)
-library(ggplot2)
+if (!require("pacman")) install.packages("pacman")
+
+pacman::p_load(dplyr, ggplot2)
 ```
 
 </br>
@@ -40,6 +39,8 @@ The main objective of this study is to evaluate possible GMO effects on these pa
 First we load the data and omit the missing observation 
 ```{r}
 data.study <- read.csv('/Users/Daniel/Documents/Courses X/Statistics in Action/Homework 1/dataMON810_2018.csv') 
+
+#data.study <- read.csv('https://github.com/daniel-wientjens/Stats-in-Action-Homework-1/blob/master/dataMON810_2018.csv')
 ```
    
 
@@ -54,15 +55,16 @@ data.study.p2 <- data.study %>% filter(period == 2)
 data.study.p2.m <- data.study.p2 %>% filter(sex == 'M')
 data.study.p2.f <- data.study.p2 %>% filter(sex == 'F')
 
+new <- aggregate(data.study.p2$CALCIUM ~ data.study.p2$sex, FUN= "mean") 
+colnames(new) <- c('sex', 'calcium')
+
 ggplot()+
   geom_point(data = data.study.p2.m, aes(x=sex, y=CALCIUM, colour = 'blue'), show.legend = F) + 
-  geom_point(data = data.study.p2.f, aes(x=sex, y=CALCIUM, colour = 'red'), show.legend = F)
-```
-```{r}
+  geom_point(data = data.study.p2.f, aes(x=sex, y=CALCIUM, colour = 'red'), show.legend = F) +
+  geom_point(data = new, aes(x=sex, y=calcium), size=5, alpha=0.5)
+
 boxplot(CALCIUM ~ sex, data = data.study, col = "blue")
 ```
-
-
 
 ```{r}
 par(mfrow = c(1, 2))
@@ -76,14 +78,17 @@ aggregate(data.study.p2$CALCIUM ~ data.study.p2$sex, FUN= "mean" )
 ```
 ```{r}
 alpha<-0.05
+
 x <- data.study[data.study$sex=="M","CALCIUM"]
 y <- data.study[data.study$sex=="F","CALCIUM"]
-t.test(x,y, conf.level=1-alpha)
+var.test(x,y, alternative = 'two.sided')
+#as we can see here the F-test shows us that the variances of the two populations are not equal
+t.test(x,y, conf.level=1-alpha, var.equal = FALSE)
 ```
 Since the p-value is very small, we can reject the H0 and say that the means of the control males and females is different.
 
      b. test for the males if the mean level of calcium is the same for period 1 and period 2.
-Here we split the original dataset into the males for period 1 and period 2 and keep only the calcium column in order to do our t-test. Since the population is similar we set the variance of the two samples to be equal
+Here we split the original dataset into the males for period 1 and period 2 and keep only the calcium column in order to do our t-test. Since the population is similar we set the variance of the two samples to be equal.
 ```{r}
 x <- data.study %>% filter(sex == 'M', period == '1') %>% select('CALCIUM', 'sex')
 y <- data.study %>% filter(sex == 'M', period == '2') %>% select('CALCIUM', 'sex')
@@ -91,25 +96,22 @@ y <- data.study %>% filter(sex == 'M', period == '2') %>% select('CALCIUM', 'sex
 aggregate(x$CALCIUM ~ x$sex, FUN= "sd" )
 aggregate(y$CALCIUM ~ y$sex, FUN= "sd" )
 
+var.test(x$CALCIUM,y$CALCIUM, alternative = 'two.sided')
+#as we can see here the F-test shows us that the variances of the two populations are not equal
 
-t.test(x$CALCIUM,y$CALCIUM, conf.level = 1-alpha, var.equal = TRUE)
+t.test(x$CALCIUM,y$CALCIUM, conf.level = 1-alpha, var.equal = FALSE)
 ```
 
-
-```{r}
-x <- data.study.p2[data.study.p2$sex=="M","CALCIUM"]
-y <- data.study.p1[data.study.p1$sex=="M","CALCIUM"]
-t.test(x,y, conf.level = 1-alpha, var.equal = TRUE)
-```
-Since the p-value is very small, we can reject the H0 and say that the means of the control males in period 1 and period 2 is different
+Since the p-value of the Welch Two Sample t-test is very small, we can reject the H0 and say that the means of the control males in period 1 and period 2 is different
 
      c. test for the males if the mean level of calcium for period 2 is the same for the control group and the MON810 group.
 ```{r}
 data.study.cont <- data.study %>% filter(sex == 'M',regimen == 'control')
 data.study.MON810 <- data.study %>% filter(sex == 'M',regimen == 'MON810') 
+var.test(data.study.cont$CALCIUM, data.study.MON810$CALCIUM,conf.level = 1-alpha, var.equal = FALSE)
 t.test(data.study.cont$CALCIUM, data.study.MON810$CALCIUM, conf.level = 1-alpha)
 ```
-Here we assume the variance is different for each group (aka the default setting of the t.test function). As we can see the p-value is very high, so we do not reject the H0, so the means are the same.
+Here we first check whether the variances are different for each group with the F-test which tells us that they are different due to the low p-value (0.025). As we can see the p-value of the Welch Two Sample t-test is very high, so we do not reject the H0 there, so the means of the males in period 2 of the control and MON810 group are the same.
 
 d. What is the probability to detect a difference of 1 sd (one standard deviation) with only 10 animals per group? with 20 animal? How can we ensure to detect such difference with a probability of 80%?
 ```{r}
