@@ -19,7 +19,7 @@ output:
 ```{r}
 if (!require("pacman")) install.packages("pacman")
 
-pacman::p_load(dplyr, ggplot2, tidyverse)
+pacman::p_load(dplyr, ggplot2, tidyverse, pwr)
 ```
 
 </br>
@@ -118,8 +118,55 @@ Here we first see that the F-test tells us that the variances are different betw
 As we can see the p-value of the Welch Two Sample t-test is very high (0.446), so we do not reject the H0 there. This translates into the fact that the means of the males in period 2 of the control and MON810 group do not differ significantly.
 
 d. What is the probability to detect a difference of 1 sd (one standard deviation) with only 10 animals per group? with 20 animal? How can we ensure to detect such difference with a probability of 80%?
+First we have to calculate the standard deviation
 ```{r}
+sd(data.study.p2.m$CALCIUM %>% na.omit() %>% filter(regimen %in% c('MON810', 'control')))
+bla <- data.study.p2.m[data.study.p2.m$regimen %in% c("MON810", "control"), ]
+bla2 <- sd(bla$CALCIUM %>% na.omit)
+```
+So the two groups are comprised of 10 individuals each, so the number of degrees of freedom is 10+10-2=18
 
+```{r}
+df <-18
+dt <- 1
+1-pt(qt(1-alpha/2,df)-dt,df) + pt(qt(alpha/2,df)-dt,df) 
+```
+So the power of the test should increase by the sample size, but the dt stays the same since delta is the standard deviation/standard deviation=1
+
+
+```{r}
+df <-38
+dt <- 1
+1-pt(qt(1-alpha/2,df)-dt,df) + pt(qt(alpha/2,df)-dt,df) 
+#or
+1-pwr.t.test(n=20, d=dt, type="two.sample", alternative="two.sided", sig.level=alpha)[[4]]
+```
+
+```{r}
+pwr.t.test(power=0.8, d=dt, sig.level=alpha) 
+```
+So we have to set n=17
+
+
+
+
+-----------------------------------------------------------------------------------------
+
+
+```{r}
+pt(q = -sd(bla$CALCIUM %>% na.omit), df =18)
+```
+So 0.2%
+for the second part we only adjust the dataframe since the standard deviation stays the same.
+degrees of freedom = 20+20-2 =38
+```{r}
+pt(q = -sd(bla$CALCIUM %>% na.omit), df =38)
+```
+so now we have a probability of this happening of 0.1%
+Third part
+We now have to calculate what the upper- and lowerbounds of the probability 
+```{r}
+pt((d.mean-bla2)/s.d.mean, dfw) + 1 - pt((d.mean+bla2)/s.d.mean, dfw)
 ```
 
 
@@ -127,6 +174,15 @@ d. What is the probability to detect a difference of 1 sd (one standard deviatio
 ```{r}
 #std.er <- sqrt((std.er(data.study.cont$CALCIUM)/10)+(std.er(data.study.MON810$CALCIUM)/10))
 ```
+
+
+-----------------------------------------------------------------------------------------
+
+
+
+
+
+
      
      
      e. Test for the males if the mean levels of calcium for period 2 of the control group and the MON810 are equivalent. The equivalence limits will be defined using the 6 reference groups as 
