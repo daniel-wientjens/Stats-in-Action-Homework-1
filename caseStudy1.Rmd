@@ -18,7 +18,6 @@ output:
 ---
 ```{r}
 if (!require("pacman")) install.packages("pacman")
-
 pacman::p_load(dplyr, ggplot2, tidyverse, pwr)
 ```
 
@@ -85,6 +84,7 @@ y <- data.study[data.study$sex=="F","CALCIUM"]
 var.test(x,y, alternative = 'two.sided')
 
 t.test(x,y, conf.level=1-alpha, var.equal = FALSE)
+#add the wilcox test since we do not assume anything with it, when we do the t-test we assume the distribution
 ```
 As we can see the F-test has pointed out that the variances are different. This is then used in the 
 Since the p-value is very small, we can reject the H0 and say that the means of the control males and females is different.
@@ -117,12 +117,15 @@ t.test(data.study.cont$CALCIUM, data.study.MON810$CALCIUM, conf.level = 1-alpha,
 Here we first see that the F-test tells us that the variances are different between the two groups due to the low p-value (0.037) with an alpha of 5%. 
 As we can see the p-value of the Welch Two Sample t-test is very high (0.446), so we do not reject the H0 there. This translates into the fact that the means of the males in period 2 of the control and MON810 group do not differ significantly.
 
-d. What is the probability to detect a difference of 1 sd (one standard deviation) with only 10 animals per group? with 20 animal? How can we ensure to detect such difference with a probability of 80%?
+    d. What is the probability to detect a difference of 1 sd (one standard deviation) with only 10 animals per group? with 20 animal? How can we ensure to detect such difference with a probability of 80%?
 First we have to calculate the standard deviation
 ```{r}
-sd(data.study.p2.m$CALCIUM %>% na.omit() %>% filter(regimen %in% c('MON810', 'control')))
+#pooled version
+#sd(data.study.p2.m$CALCIUM %>% na.omit() %>% filter(regimen %in% c('MON810', 'control')))
 bla <- data.study.p2.m[data.study.p2.m$regimen %in% c("MON810", "control"), ]
 bla2 <- sd(bla$CALCIUM %>% na.omit)
+bla2
+#should look into pooled version a bit more Louis got 1.09 or something
 ```
 So the two groups are comprised of 10 individuals each, so the number of degrees of freedom is 10+10-2=18
 
@@ -135,13 +138,17 @@ So the power of the test should increase by the sample size, but the dt stays th
 
 
 ```{r}
-df <-38
-dt <- 1
+df <-18
+#dt <- 1
+dt<- 1/sqrt((1/5))
+#look at dt <- 1/(1/#nx + 1/#ny)
 1-pt(qt(1-alpha/2,df)-dt,df) + pt(qt(alpha/2,df)-dt,df) 
 #or
-1-pwr.t.test(n=20, d=dt, type="two.sample", alternative="two.sided", sig.level=alpha)[[4]]
+dt <- 1
+pwr.t.test(n=20, d=dt, type="two.sample", alternative="two.sided", sig.level=alpha)[[4]]
 ```
-
+Next we want to find the number of observations for which the detection of more than 1 sd is equal or higher than 80%.
+For this we fill in the power function and set 
 ```{r}
 pwr.t.test(power=0.8, d=dt, sig.level=alpha) 
 ```
