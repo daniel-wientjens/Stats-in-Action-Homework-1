@@ -223,8 +223,87 @@ pt(q = -sd(calciumEMean$CALCIUM), df = dim(calciumE)[1]-6)
    
    2. Do the same analysis with the variable "DIRBILI" (direct bilirubin)
 
+a)test if the mean level of calcium for period 2 is the same for males and females. 
+Hint: plot first the data and justify the test(s) to use.
+
+   Here we unfortunately cannot do the same test as before since this is categorical data
+   Nevertheless we plot the data and see what we can learn from it.
+
 ```{r}
-calciumE <- data.study %>% filter(sex == 'M') %>% filter(period == 2, regimen != 'control', regimen != 'MON810') %>% select(regimen, CALCIUM) %>% na.omit
+dirbili <- data.study %>% select(regimen,sex,period,DIRBILI) %>% na.omit()
+dirbili$period <- as.factor(dirbili$period)
+```
+
+```{r}
+#Splitting the dataset into the two periods 
+dirbili.p1 <- dirbili %>% filter(period == 1)
+dirbili.p2 <- dirbili %>% filter(period == 2)
+
+#Splitting the dataset of period 2 into male and female and plotting the result
+dirbili.p2.m <- dirbili.p2 %>% filter(sex == 'M')
+dirbili.p2.f <- dirbili.p2 %>% filter(sex == 'F')
+
+dirbili.p1.m <- dirbili.p1 %>% filter(sex == 'M')
+dirbili.p1.f <- dirbili.p1 %>% filter(sex == 'F')
+
+new <- aggregate(dirbili$DIRBILI ~ dirbili$sex, FUN= "mean") 
+colnames(new) <- c('sex', 'dirbili')
+
+ggplot() +
+  geom_point(data = dirbili.p2.m, aes(x=sex, y=DIRBILI, colour = 'blue'), show.legend = F) + 
+  geom_point(data = dirbili.p2.f, aes(x=sex, y=DIRBILI, colour = 'red'), show.legend = F) +
+  geom_point(data = new, aes(x=sex, y=dirbili), size=5, alpha=0.5)
+```
+
+```{r}
+table(dirbili.p2 %>% select(sex,DIRBILI))
+```
+Since this is categorical data and hence split into different classes we perform a chi squared test on the continuity table.
+```{r}
+chisq.test(table(dirbili.p2 %>% select(sex,DIRBILI)), correct = FALSE)
+```
+As we can see the p value is large and hence the H0 holds where we say that the means of the two groups male and female in period two do not differ.
+
+b)test for the males if the mean level of dirbili is the same for period 1 and period 2.
+```{r}
+new <- aggregate(dirbili$DIRBILI ~ dirbili$period, FUN= "mean") 
+colnames(new) <- c('period', 'dirbili')
+
+ggplot() +
+  geom_point(data = dirbili.p1.m, aes(x=period, y=DIRBILI, colour = period), show.legend = F) + 
+  geom_point(data = dirbili.p2.m, aes(x=period, y=DIRBILI, colour = period), show.legend = F) +
+  geom_point(data = new, aes(x=period, y=dirbili), size=5, alpha=0.5)
+```
+
+
+```{r}
+table(dirbili %>% select(period,DIRBILI))
+```
+Since correction is only available for 2 by 2 tables we do not need to write it in the formula
+
+```{r}
+chisq.test(table(dirbili %>% select(period,DIRBILI)))
+```
+So we can reject the H0 hence we can say that the two means are different.
+
+
+c)test for the males if the mean level of calcium for period 2 is the same for the control group and the MON810 group.
+```{r}
+dirbili.cont <- dirbili %>% filter(sex == 'M', period == '2', regimen == 'control')
+dirbili.MON810 <- dirbili %>% filter(sex == 'M',period == '2', regimen == 'MON810') 
+```
+
+```{r}
+new <- aggregate(dirbili.p2.m$DIRBILI ~ dirbili.p2.m$regimen, FUN= "mean")
+colnames(new) <- c('regimen', 'dirbili')
+new <- new %>% filter(regimen %in% c('control','MON810')) 
+
+unique(dirbili.p2.m)
+
+ggplot() +
+  geom_point(data = dirbili.p2.m %>% filter(regimen == 'control'), aes(x=regimen, y=DIRBILI, colour = regimen), show.legend = F) + 
+  geom_point(data = dirbili.p2.m %>% filter(regimen == 'MON810'), aes(x=regimen, y=DIRBILI, colour = regimen), show.legend = F) +
+  geom_point(data = new, aes(x=regimen, y=dirbili), size=5, alpha=0.5)
 ```
 
 
