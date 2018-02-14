@@ -173,7 +173,7 @@ so now we have a probability of this happening of 0.1%
 Third part
 We now have to calculate what the upper- and lowerbounds of the probability 
 ```{r}
-pt((d.mean-bla2)/s.d.mean, dfw) + 1 - pt((d.mean+bla2)/s.d.mean, dfw)
+#pt((d.mean-bla2)/s.d.mean, dfw) + 1 - pt((d.mean+bla2)/s.d.mean, dfw)
 ```
 
 
@@ -214,7 +214,7 @@ t.power = function(nsamp=c(10,10),nsim=1000,means=c(0,0),sds=c(1,1)){
     sum(ts < lower | ts > upper) / nsim
 }
 
-pt(q = -sd(calciumEMean$CALCIUM), df = dim(calciumE)[1]-6)
+#pt(q = -sd(calciumEMean$CALCIUM), df = dim(calciumE)[1]-6)
 ```
      
      *ii)* two standard deviations of the 6 reference means.
@@ -305,6 +305,28 @@ ggplot() +
   geom_point(data = dirbili.p2.m %>% filter(regimen == 'MON810'), aes(x=regimen, y=DIRBILI, colour = regimen), show.legend = F) +
   geom_point(data = new, aes(x=regimen, y=dirbili), size=5, alpha=0.5)
 ```
+As we can see here the two means are the same so we perform another chisquared test
+```{r}
+table(dirbili.p2.m  %>% filter(regimen %in% c('control','MON810')) %>% select(regimen, DIRBILI))[1:2,]
+```
+```{r}
+chisq.test(table(dirbili.p2.m  %>% filter(regimen %in% c('control','MON810')) %>% select(regimen, DIRBILI))[1:2,])
+```
+Here the p-value is equal to 1 which makes sense since the means are the same and we have the same number of observations per dirbili group. 
+
+d) What is the probability to detect a difference of 1 sd (one standard deviation) with only 10 animals per group? with 20 animal? How can we ensure to detect such difference with a probability of 80%?
+
+```{r}
+
+```
+
+
+e) Test for the males if the mean levels of dirbili for period 2 of the control group and the MON810 are equivalent. The equivalence limits will be defined using the 6 reference groups as i) one standard deviation of the 6 reference means, ii) two standard deviations of the 6 reference means.
+
+```{r}
+sd()
+```
+
 
 
 </br>
@@ -314,6 +336,68 @@ ggplot() +
 
 
    1. Redo the three tests of the previous section (questions a., b. and c.) for now comparing  the means of all the quantitative variables (see the annex 5 of the ANSES report <ttt>BIOT2009sa0285Ra.pdf</ttt> to know the type of each variable). Store the results (i.e. all the p-values) in a dataframe with one variable per row and four columns (name of the variable + three p-values). 
+   All the variables are quantitative except these: BILI, PROT, GLUCOSE, BLOOD, KETONE, UROBILI, GAMMAGT, TESTIS
+```{r}
+#test if the mean level of calcium for period 2 is the same for males and females.  </br>**Hint:** plot first the data and justify the test(s) to use.
+question.a <- function(variable){
+  m <- data.study %>% filter(sex == 'M', period == 2) %>% select(variable) %>% na.omit()
+  f <- data.study %>% filter(sex == 'F', period == 2) %>% select(variable) %>% na.omit()
+  x <- wilcox.test(m[,1], f[,1], alternative = 'two.sided', conf.level=1-0.05)
+  return(x$p.value)
+}
+question.a('CALCIUM')
+
+```
+
+
+
+```{r}
+questionB <- function(variable, data){
+  # Filter the variable for males in period 1 and 2
+  dataNew <- data.study %>% filter(sex == 'M') %>% select(period, variable) %>% na.omit
+  
+  # Calculate F-test's p-value
+  pVal <- var.test((dataNew %>% filter(period == 1))[,2], (dataNew %>% filter(period == 2))[,2], conf.level = 1 - 0.05, alternative = 'two.sided')$p.value
+  
+  # Check if the two periods have equal variances
+  varEqual <- pVal > 0.05
+  
+  # Perform the t-test
+  t.test((dataNew %>% filter(period == 1))[,2], (dataNew %>% filter(period == 2))[,2], conf.level = 1 - 0.05, var.equal = varEqual)$p.value
+}
+
+questionB('CALCIUM', data.study)
+```
+
+```{r}
+getp3 <- function(variable){
+alpha=0.05
+variable_period<-data.study %>% filter(period=='2',sex=='M') %>% select(variable,regimen) %>% na.omit()
+x<-variable_period %>% filter(regimen=='control') %>% pull(variable)
+y<-variable_period %>% filter(regimen=='MON810') %>% pull(variable) 
+a=wilcox.test(x,y, alternative="two.sided", conf.level=1-alpha)
+return(a$p.value)
+}
+getp3('CALCIUM')
+```
+
+
+
+
+
+```{r}
+variable <- data.study  %>% select(-GLUCOSE, -BLOOD, -BILI, -PROT ,-KETONE, -UROBILI, -GAMMAGT, -TESTIS,-id,-X,-regimen,-sex,-period) %>% colnames() 
+variable<- variable %>% as.data.frame()
+
+for (i in 1:10){
+  print(question.a(variable[i,]))
+}
+
+result <- apply (variable, 1, function(x) question.a(x))
+
+```
+
+   
    
    2. For each of the three tests, adjust the p-values using the Bonferroni  and the Benjamini-Hochberg corrections. How can we interpret these results?
    
