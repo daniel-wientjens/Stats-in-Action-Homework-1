@@ -219,31 +219,31 @@ We now have to calculate what the upper- and lowerbounds of the probability
      
      
      e. Test for the males if the mean levels of calcium for period 2 of the control group and the MON810 are equivalent. The equivalence limits will be defined using the 6 reference groups as 
-     *i)* one standard deviation of the 6 reference means. 
+First we filter the data
 ```{r}
 data.study.cont <- data.study %>% filter(sex == 'M', period == '2', regimen == 'control')
 data.study.MON810 <- data.study %>% filter(sex == 'M',period == '2', regimen == 'MON810') 
 data.study.ref <- data.study %>% filter(sex == 'M',period == '2', regimen != 'control', regimen != 'MON810') %>%  select(regimen, CALCIUM) %>% na.omit
+```
 
+     *i)* one standard deviation of the 6 reference means. 
+Next we calculate the standard deviation of the 6 reference means
+```{r}
 ref <- aggregate(data.study.ref$CALCIUM ~ data.study.ref$regimen, FUN = 'mean')
-
 sd(ref$`data.study.ref$CALCIUM`)
 ```
+This value we use in the pt function.
+We calculate the degrees of freedom by taking the number of observations and subtracting the number of classes/categories: 58-6=52
 ```{r}
-t.power = function(nsamp=c(10,10),nsim=1000,means=c(0,0),sds=c(1,1)){
-    lower = qt(.025,df=sum(nsamp) - 2)
-    upper = qt(.975,df=sum(nsamp) - 2)
-    ts = replicate(nsim,
-       t.test(rnorm(nsamp[1],mean=means[1],sd=sds[1]),
-              rnorm(nsamp[2],mean=means[2],sd=sds[2]))$statistic)
-
-    sum(ts < lower | ts > upper) / nsim
-}
-
-#pt(q = -sd(calciumEMean$CALCIUM), df = dim(calciumE)[1]-6)
+pt(q = -sd(ref$`data.study.ref$CALCIUM`), df = dim(data.study.ref)[1]-6)*2*100
 ```
+This result says that we have a probabilty of 43% of observing 1 stdev (calculated by the the 6 reference means) given all observations. 
      
      *ii)* two standard deviations of the 6 reference means.
+```{r}
+pt(q = -2*sd(ref$`data.study.ref$CALCIUM`), df = dim(data.study.ref)[1]-6)*2*100
+```
+     
      
      f. Summarize and comment these results.
    
@@ -252,7 +252,7 @@ t.power = function(nsamp=c(10,10),nsim=1000,means=c(0,0),sds=c(1,1)){
 a)test if the mean level of calcium for period 2 is the same for males and females. 
 Hint: plot first the data and justify the test(s) to use.
 
-   Here we unfortunately cannot do the same test as before since DIRBILI is categorical data
+   Here we unfortunately cannot do the same test as before since DIRBILI is discreet data in period 2.
    Nevertheless we plot the data and see what we can learn from it.
 
 ```{r}
