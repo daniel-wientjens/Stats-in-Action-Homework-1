@@ -75,7 +75,7 @@ aggregate(data.study.p2$CALCIUM ~ data.study.p2$sex, FUN= "mean" )
 ```
 After all these plot we can see that the means and variances are probably both different between the two groups. However we should not rely on our eyes and do some tests! 
 So first we check whether the variances differ between the male and female polulation by performing an F-test. 
-Lastly we use that result to conduct a T-test since we need to know whether to leave the var.equal at it's default value or to change it to TRUE. 
+Then my first intuition would be to conduct a t-test since we need to know whether to leave the var.equal at it's default value or to change it to TRUE. 
 ```{r}
 alpha<-0.05
 
@@ -84,13 +84,21 @@ y <- data.study[data.study$sex=="F","CALCIUM"]
 var.test(x,y, alternative = 'two.sided')
 
 t.test(x,y, conf.level=1-alpha, var.equal = FALSE)
-#add the wilcox test since we do not assume anything with it, when we do the t-test we assume the distribution
 ```
 As we can see the F-test has pointed out that the variances are different. This is then used in the 
 Since the p-value is very small, we can reject the H0 and say that the means of the control males and females is different.
+But on second thought we should also run a Wilcoxon test since it is more powerfull due to lack of assumptions about the distribution of the data. 
+```{r}
+#add the wilcox test since we do not assume anything with it, when we do the t-test we assume the distribution
+m <- data.study %>% filter(sex == 'M', period == 2) %>% select(CALCIUM) %>% na.omit()
+f <- data.study %>% filter(sex == 'F', period == 2) %>% select(CALCIUM) %>% na.omit()
+x <- wilcox.test(m[,1], f[,1], alternative = 'two.sided', conf.level=1-0.05)
+x
+```
+Also with this test we see that the p value is very small and hence the H0 can be rejected and that means that the means of the control males and females is different.
 
      b. Test for the males if the mean level of calcium is the same for period 1 and period 2.
-Here we split the original dataset into the males for period 1 and period 2 and keep only the calcium column in order to do our t-test. Since the population is similar we set the variance of the two samples to be equal.
+Here we split the original dataset into the males for period 1 and period 2 and keep only the calcium column in order to do our t-test. Then we perform the F-test and t-test like before plus we also do the Wilcox test.
 ```{r}
 x <- data.study %>% filter(sex == 'M', period == '1') %>% select('CALCIUM', 'sex')
 y <- data.study %>% filter(sex == 'M', period == '2') %>% select('CALCIUM', 'sex')
@@ -99,11 +107,21 @@ aggregate(x$CALCIUM ~ x$sex, FUN= "sd" )
 aggregate(y$CALCIUM ~ y$sex, FUN= "sd" )
 
 var.test(x$CALCIUM,y$CALCIUM, alternative = 'two.sided')
-
+```
+As can be seen in the result above the F-test shows us that the variances are different hence we run the t-test with var.equal = FALSE.
+```{r}
 t.test(x$CALCIUM,y$CALCIUM, conf.level = 1-alpha, var.equal = FALSE)
 ```
-
-Since the p-value of the Welch Two Sample t-test is very small, we can reject the H0 and say that the means of the control males in period 1 and period 2 is different
+Since the p-value of the Welch Two Sample t-test is very small, we can reject the H0 and say that the means of the control males in period 1 and period 2 is different.
+Next we perform the Wilcoxon test again, since it has less ridged assumptions than the t-test we prefer this test.
+(The t-test assumes that the distribution of the data is normal, whereas with the wilcoxon we don’t make the assumption that the distribution of the data belongs to a family of parametric ditributions)
+```{r}
+m <- data.study %>% filter(sex == 'M', period == 1) %>% select(CALCIUM) %>% na.omit()
+f <- data.study %>% filter(sex == 'F', period == 2) %>% select(CALCIUM) %>% na.omit()
+x <- wilcox.test(m[,1], f[,1], alternative = 'two.sided', conf.level=1-0.05)
+x
+```
+Here we can agian see and confirm that the p value is close to 0 and hence reject the H0 and say that the means of the control males in period 1 and period 2 is different.
 
      c. test for the males if the mean level of calcium for period 2 is the same for the control group and the MON810 group.
 As per usual we split the dataset into the two groups we want to compare, so here we filter them to only contain males from period 2 and have the control group vs the MON810 group.
@@ -116,6 +134,14 @@ t.test(data.study.cont$CALCIUM, data.study.MON810$CALCIUM, conf.level = 1-alpha,
 ```
 Here we first see that the F-test tells us that the variances are different between the two groups due to the low p-value (0.037) with an alpha of 5%. 
 As we can see the p-value of the Welch Two Sample t-test is very high (0.446), so we do not reject the H0 there. This translates into the fact that the means of the males in period 2 of the control and MON810 group do not differ significantly.
+Let's perform a Wilcoxon test as well and see if it concurs with the findings of the t-test
+```{r}
+m <- data.study %>% filter(sex == 'M', period == 2,regimen == 'control') %>% select(CALCIUM) %>% na.omit()
+f <- data.study %>% filter(sex == 'M', period == 2,regimen == 'MON810') %>% select(CALCIUM) %>% na.omit()
+x <- wilcox.test(m[,1], f[,1], alternative = 'two.sided', conf.level=1-0.05)
+x
+```
+Here we get a different p-value than the t-test but both of the p-values signify that we cannot reject the H0 and so the two means of the control and MON810 groups do not differ.
 
     d. What is the probability to detect a difference of 1 sd (one standard deviation) with only 10 animals per group? with 20 animal? How can we ensure to detect such difference with a probability of 80%?
 First we have to calculate the standard deviation
@@ -152,7 +178,7 @@ For this we fill in the power function and set
 ```{r}
 pwr.t.test(power=0.8, d=dt, sig.level=alpha) 
 ```
-So we have to set n=17
+So we have to set n=17 for the probability to be able to detect a difference of 1 standard deviation to be higher than 80%.
 
 
 
@@ -226,7 +252,7 @@ t.power = function(nsamp=c(10,10),nsim=1000,means=c(0,0),sds=c(1,1)){
 a)test if the mean level of calcium for period 2 is the same for males and females. 
 Hint: plot first the data and justify the test(s) to use.
 
-   Here we unfortunately cannot do the same test as before since this is categorical data
+   Here we unfortunately cannot do the same test as before since DIRBILI is categorical data
    Nevertheless we plot the data and see what we can learn from it.
 
 ```{r}
@@ -392,6 +418,15 @@ variable<- variable %>% as.data.frame()
 for (i in 1:10){
   print(question.a(variable[i,]))
 }
+
+for (i in 1:10){
+  print(questionB(variable[i,]))
+}
+
+for (i in 1:10){
+  print(getp3(variable[i,]))
+}
+
 
 result <- apply (variable, 1, function(x) question.a(x))
 
