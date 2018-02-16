@@ -18,7 +18,7 @@ output:
 ---
 ```{r}
 if (!require("pacman")) install.packages("pacman")
-pacman::p_load(dplyr, ggplot2, tidyverse, pwr)
+pacman::p_load(dplyr, ggplot2, tidyverse, pwr, equivalence)
 ```
 
 </br>
@@ -73,9 +73,9 @@ hist(data.study.p2.m$CALCIUM, main='Histogram of calcium for male')
 aggregate(data.study.p2$CALCIUM ~ data.study.p2$sex, FUN= "sd" )
 aggregate(data.study.p2$CALCIUM ~ data.study.p2$sex, FUN= "mean" )
 ```
-After all these plot we can see that the means and variances are probably both different between the two groups. However we should not rely on our eyes and do some tests! 
+After all these plot we have to determine what kind of a distribution we have in front of us. If it is a normal distribution we should use a t-test.
 So first we check whether the variances differ between the male and female polulation by performing an F-test. 
-Then my first intuition would be to conduct a t-test since we need to know whether to leave the var.equal at it's default value or to change it to TRUE. 
+Only then we conduct a t-test since we need to know whether to leave the var.equal at it's default value or to change it to TRUE. 
 ```{r}
 alpha<-0.05
 
@@ -87,21 +87,23 @@ t.test(x,y, conf.level=1-alpha, var.equal = FALSE)
 ```
 As we can see the F-test has pointed out that the variances are different. This is then used in the 
 Since the p-value is very small, we can reject the H0 and say that the means of the control males and females is different.
-But on second thought we should also run a Wilcoxon test since it is more powerfull due to lack of assumptions about the distribution of the data. 
+If we decide that the distribution of the data is not following a normal distribution we should use a Wilcoxon test.
+A Wilcoxon test since it is more powerfull due to lack of assumptions about the distribution of the data. 
 ```{r}
 #add the wilcox test since we do not assume anything with it, when we do the t-test we assume the distribution
-m <- data.study %>% filter(sex == 'M', period == 2) %>% select(CALCIUM) %>% na.omit()
-f <- data.study %>% filter(sex == 'F', period == 2) %>% select(CALCIUM) %>% na.omit()
+m <- data.study %>% filter(sex == 'M', period == 2) %>% dplyr::select(CALCIUM) %>% na.omit()
+f <- data.study %>% filter(sex == 'F', period == 2) %>% dplyr::select(CALCIUM) %>% na.omit()
 x <- wilcox.test(m[,1], f[,1], alternative = 'two.sided', conf.level=1-0.05)
 x
 ```
 Also with this test we see that the p value is very small and hence the H0 can be rejected and that means that the means of the control males and females is different.
+So both tests show that the means of calcium levels for males and females in period 2 are the different (since H0 is that they are the same/similar and due to the low p-value we reject H0).
 
      b. Test for the males if the mean level of calcium is the same for period 1 and period 2.
 Here we split the original dataset into the males for period 1 and period 2 and keep only the calcium column in order to do our t-test. Then we perform the F-test and t-test like before plus we also do the Wilcox test.
 ```{r}
-x <- data.study %>% filter(sex == 'M', period == '1') %>% select('CALCIUM', 'sex')
-y <- data.study %>% filter(sex == 'M', period == '2') %>% select('CALCIUM', 'sex')
+x <- data.study %>% filter(sex == 'M', period == '1') %>% dplyr::select('CALCIUM', 'sex')
+y <- data.study %>% filter(sex == 'M', period == '2') %>% dplyr::select('CALCIUM', 'sex')
 
 aggregate(x$CALCIUM ~ x$sex, FUN= "sd" )
 aggregate(y$CALCIUM ~ y$sex, FUN= "sd" )
@@ -116,8 +118,8 @@ Since the p-value of the Welch Two Sample t-test is very small, we can reject th
 Next we perform the Wilcoxon test again, since it has less ridged assumptions than the t-test we prefer this test.
 (The t-test assumes that the distribution of the data is normal, whereas with the wilcoxon we don’t make the assumption that the distribution of the data belongs to a family of parametric ditributions)
 ```{r}
-m <- data.study %>% filter(sex == 'M', period == 1) %>% select(CALCIUM) %>% na.omit()
-f <- data.study %>% filter(sex == 'F', period == 2) %>% select(CALCIUM) %>% na.omit()
+m <- data.study %>% filter(sex == 'M', period == 1) %>% dplyr::select(CALCIUM) %>% na.omit()
+f <- data.study %>% filter(sex == 'M', period == 2) %>% dplyr::select(CALCIUM) %>% na.omit()
 x <- wilcox.test(m[,1], f[,1], alternative = 'two.sided', conf.level=1-0.05)
 x
 ```
@@ -136,43 +138,47 @@ Here we first see that the F-test tells us that the variances are different betw
 As we can see the p-value of the Welch Two Sample t-test is very high (0.446), so we do not reject the H0 there. This translates into the fact that the means of the males in period 2 of the control and MON810 group do not differ significantly.
 Let's perform a Wilcoxon test as well and see if it concurs with the findings of the t-test
 ```{r}
-m <- data.study %>% filter(sex == 'M', period == 2,regimen == 'control') %>% select(CALCIUM) %>% na.omit()
-f <- data.study %>% filter(sex == 'M', period == 2,regimen == 'MON810') %>% select(CALCIUM) %>% na.omit()
+m <- data.study %>% filter(sex == 'M', period == 2,regimen == 'control') %>% dplyr::select(CALCIUM) %>% na.omit()
+f <- data.study %>% filter(sex == 'M', period == 2,regimen == 'MON810') %>% dplyr::select(CALCIUM) %>% na.omit()
 x <- wilcox.test(m[,1], f[,1], alternative = 'two.sided', conf.level=1-0.05)
 x
 ```
 Here we get a different p-value than the t-test but both of the p-values signify that we cannot reject the H0 and so the two means of the control and MON810 groups do not differ.
 
     d. What is the probability to detect a difference of 1 sd (one standard deviation) with only 10 animals per group? with 20 animal? How can we ensure to detect such difference with a probability of 80%?
-First we have to calculate the standard deviation
-```{r}
-#pooled version
-#sd(data.study.p2.m$CALCIUM %>% na.omit() %>% filter(regimen %in% c('MON810', 'control')))
-bla <- data.study.p2.m[data.study.p2.m$regimen %in% c("MON810", "control"), ]
-bla2 <- sd(bla$CALCIUM %>% na.omit)
-bla2
-#should look into pooled version a bit more Louis got 1.09 or something
-```
 So the two groups are comprised of 10 individuals each, so the number of degrees of freedom is 10+10-2=18
-
+Next for the power of the test should increase by the sample size, but the dt stays the same since delta is the standard deviation and we are dividing the delta by the standard deviation so the result will always be 1
 ```{r}
-df <-18
-dt <- 1
-1-pt(qt(1-alpha/2,df)-dt,df) + pt(qt(alpha/2,df)-dt,df) 
+alpha=0.05
+delta <- 1
+x.sd <- 1
+df <- 18
+dt <- delta/x.sd/sqrt(1/10+1/10)
+1-pt(qt(1-alpha/2,df)-dt,df) + pt(qt(alpha/2,df)-dt,df)
 ```
-So the power of the test should increase by the sample size, but the dt stays the same since delta is the standard deviation/standard deviation=1
-
-
+We can check this by running the code in the function pwr.t.test
 ```{r}
-df <-18
-#dt <- 1
-dt<- 1/sqrt((1/5))
-#look at dt <- 1/(1/#nx + 1/#ny)
-1-pt(qt(1-alpha/2,df)-dt,df) + pt(qt(alpha/2,df)-dt,df) 
-#or
-dt <- 1
-pwr.t.test(n=20, d=dt, type="two.sample", alternative="two.sided", sig.level=alpha)[[4]]
+pwr.t.test(n=10, d=1, type="two.sample", alternative="two.sided", sig.level=alpha)[[4]]
 ```
+So the probability of detecting 1 sd difference with only 10 animals per group is 55%
+
+Next we try the same but change the sample size to 20 animals per group
+```{r}
+alpha=0.05
+delta <- 1 
+x.sd <- 1
+df <- 38
+dt <- delta/x.sd/sqrt(1/20+1/20)
+1-pt(qt(1-alpha/2,df)-dt,df) + pt(qt(alpha/2,df)-dt,df)
+```
+We can check this by running the code in the function pwr.t.test.
+```{r}
+pwr.t.test(n=20, d=1, type="two.sample", alternative="two.sided", sig.level=alpha)[[4]]
+```
+So the probability of detecting 1 sd difference with only 20 animals per group is 55%
+
+
+
 Next we want to find the number of observations for which the detection of more than 1 sd is equal or higher than 80%.
 For this we fill in the power function and set 
 ```{r}
@@ -180,50 +186,12 @@ pwr.t.test(power=0.8, d=dt, sig.level=alpha)
 ```
 So we have to set n=17 for the probability to be able to detect a difference of 1 standard deviation to be higher than 80%.
 
-
-
-
------------------------------------------------------------------------------------------
-
-
-```{r}
-pt(q = -sd(bla$CALCIUM %>% na.omit), df =18)
-```
-So 0.2%
-for the second part we only adjust the dataframe since the standard deviation stays the same.
-degrees of freedom = 20+20-2 =38
-```{r}
-pt(q = -sd(bla$CALCIUM %>% na.omit), df =38)
-```
-so now we have a probability of this happening of 0.1%
-Third part
-We now have to calculate what the upper- and lowerbounds of the probability 
-```{r}
-#pt((d.mean-bla2)/s.d.mean, dfw) + 1 - pt((d.mean+bla2)/s.d.mean, dfw)
-```
-
-
-     
-```{r}
-#std.er <- sqrt((std.er(data.study.cont$CALCIUM)/10)+(std.er(data.study.MON810$CALCIUM)/10))
-```
-
-
------------------------------------------------------------------------------------------
-
-
-
-
-
-
-     
-     
      e. Test for the males if the mean levels of calcium for period 2 of the control group and the MON810 are equivalent. The equivalence limits will be defined using the 6 reference groups as 
 First we filter the data
 ```{r}
 data.study.cont <- data.study %>% filter(sex == 'M', period == '2', regimen == 'control')
 data.study.MON810 <- data.study %>% filter(sex == 'M',period == '2', regimen == 'MON810') 
-data.study.ref <- data.study %>% filter(sex == 'M',period == '2', regimen != 'control', regimen != 'MON810') %>%  select(regimen, CALCIUM) %>% na.omit
+data.study.ref <- data.study %>% filter(sex == 'M',period == '2', regimen != 'control', regimen != 'MON810') %>%  dplyr::select(regimen, CALCIUM) %>% na.omit
 ```
 
      *i)* one standard deviation of the 6 reference means. 
@@ -234,6 +202,13 @@ sd(ref$`data.study.ref$CALCIUM`)
 ```
 This value we use in the pt function.
 We calculate the degrees of freedom by taking the number of observations and subtracting the number of classes/categories: 58-6=52
+
+```{r}
+delta <- sd(ref$`data.study.ref$CALCIUM`)
+tost(data.study.MON810$CALCIUM, data.study.cont$CALCIUM, alpha=0.05, epsilon=delta)
+```
+So the null hypothesis is not rejected, hence the male means of the calcium levels in period two are the same when we take the equivalence limit of 1 sd of the reference means 
+
 ```{r}
 pt(q = -sd(ref$`data.study.ref$CALCIUM`), df = dim(data.study.ref)[1]-6)*2*100
 ```
@@ -241,9 +216,15 @@ This result says that we have a probabilty of 43% of observing 1 stdev (calculat
      
      *ii)* two standard deviations of the 6 reference means.
 ```{r}
+delta <- 2* sd(ref$`data.study.ref$CALCIUM`)
+tost(data.study.MON810$CALCIUM, data.study.cont$CALCIUM, alpha=0.05, epsilon=delta)
+```
+Now the only difference is that we multiply the delta by 2 since we want to take two sd.
+
+```{r}
 pt(q = -2*sd(ref$`data.study.ref$CALCIUM`), df = dim(data.study.ref)[1]-6)*2*100
 ```
-     
+This result says that we have a probabilty of 12% of observing 2 stdev (calculated by the the 6 reference means) given all observations.      
      
      f. Summarize and comment these results.
    
@@ -256,7 +237,7 @@ Hint: plot first the data and justify the test(s) to use.
    Nevertheless we plot the data and see what we can learn from it.
 
 ```{r}
-dirbili <- data.study %>% select(regimen,sex,period,DIRBILI) %>% na.omit()
+dirbili <- data.study %>% dplyr::select(regimen,sex,period,DIRBILI) %>% na.omit()
 dirbili$period <- as.factor(dirbili$period)
 ```
 
@@ -265,7 +246,7 @@ dirbili$period <- as.factor(dirbili$period)
 dirbili.p1 <- dirbili %>% filter(period == 1)
 dirbili.p2 <- dirbili %>% filter(period == 2)
 
-#Splitting the dataset of period 2 into male and female and plotting the result
+#Splitting the dataset into period 1 and 2 and into male and female and plotting the result
 dirbili.p2.m <- dirbili.p2 %>% filter(sex == 'M')
 dirbili.p2.f <- dirbili.p2 %>% filter(sex == 'F')
 
@@ -282,11 +263,11 @@ ggplot() +
 ```
 
 ```{r}
-table(dirbili.p2 %>% select(sex,DIRBILI))
+table(dirbili.p2 %>% dplyr::select(sex,DIRBILI))
 ```
 Since this is categorical data and hence split into different classes we perform a chi squared test on the continuity table.
 ```{r}
-chisq.test(table(dirbili.p2 %>% select(sex,DIRBILI)), correct = FALSE)
+chisq.test(table(dirbili.p2 %>% dplyr::select(sex,DIRBILI)), correct = FALSE)
 ```
 As we can see the p value is large and hence the H0 holds where we say that the means of the two groups male and female in period two do not differ.
 
@@ -303,12 +284,12 @@ ggplot() +
 
 
 ```{r}
-table(dirbili %>% select(period,DIRBILI))
+table(dirbili %>% dplyr::select(period,DIRBILI))
 ```
 Since correction is only available for 2 by 2 tables we do not need to write it in the formula
 
 ```{r}
-chisq.test(table(dirbili %>% select(period,DIRBILI)))
+chisq.test(table(dirbili %>% dplyr::select(period,DIRBILI)))
 ```
 So we can reject the H0 hence we can say that the two means are different.
 
@@ -333,10 +314,11 @@ ggplot() +
 ```
 As we can see here the two means are the same so we perform another chisquared test
 ```{r}
-table(dirbili.p2.m  %>% filter(regimen %in% c('control','MON810')) %>% select(regimen, DIRBILI))[1:2,]
+table(dirbili.p2.m  %>% filter(regimen %in% c('control','MON810')) %>% dplyr::select(regimen, DIRBILI))[1:2,]
 ```
+
 ```{r}
-chisq.test(table(dirbili.p2.m  %>% filter(regimen %in% c('control','MON810')) %>% select(regimen, DIRBILI))[1:2,])
+chisq.test(table(dirbili.p2.m  %>% filter(regimen %in% c('control','MON810')) %>% dplyr::select(regimen, DIRBILI))[1:2,])
 ```
 Here the p-value is equal to 1 which makes sense since the means are the same and we have the same number of observations per dirbili group. 
 
@@ -349,9 +331,44 @@ d) What is the probability to detect a difference of 1 sd (one standard deviatio
 
 e) Test for the males if the mean levels of dirbili for period 2 of the control group and the MON810 are equivalent. The equivalence limits will be defined using the 6 reference groups as i) one standard deviation of the 6 reference means, ii) two standard deviations of the 6 reference means.
 
+First we filter the data
 ```{r}
-sd()
+data.study.cont <- data.study %>% filter(sex == 'M', period == '2', regimen == 'control')
+data.study.MON810 <- data.study %>% filter(sex == 'M',period == '2', regimen == 'MON810') 
+data.study.ref <- data.study %>% filter(sex == 'M',period == '2', regimen != 'control', regimen != 'MON810') %>%  dplyr::select(regimen, DIRBILI) %>% na.omit
 ```
+
+     *i)* one standard deviation of the 6 reference means. 
+Next we calculate the standard deviation of the 6 reference means
+```{r}
+ref <- aggregate(data.study.ref$DIRBILI ~ data.study.ref$regimen, FUN = 'mean')
+sd(ref$`data.study.ref$DIRBILI`)
+```
+
+```{r}
+delta <- sd(ref$`data.study.ref$DIRBILI`)
+tost(data.study.MON810$DIRBILI, data.study.cont$DIRBILI, alpha=0.05, epsilon=delta)
+```
+So the null hypothesis is not rejected, hence the male means of the DIRBILI levels in period two are the same when we take the equivalence limit of 1 sd of the reference means.
+
+This value we use in the pt function.
+We calculate the degrees of freedom by taking the number of observations and subtracting the number of classes/categories: 60-6=54
+```{r}
+pt(q = -sd(ref$`data.study.ref$DIRBILI`), df = dim(data.study.ref)[1]-6)*2*100
+```
+This result says that we have a probabilty of 99% of observing 1 stdev (calculated by the the 6 reference means) given all observations. 
+     
+     *ii)* two standard deviations of the 6 reference means.
+```{r}
+delta <- 2* sd(ref$`data.study.ref$DIRBILI`)
+tost(data.study.MON810$DIRBILI, data.study.cont$DIRBILI, alpha=0.05, epsilon=delta)
+```
+Now the only difference is that we multiply the delta by 2 since we want to take two sd.
+
+```{r}
+pt(q = -2*sd(ref$`data.study.ref$DIRBILI`), df = dim(data.study.ref)[1]-6)*2*100
+```
+This result says that we have a probabilty of 98% of observing 2 stdev (calculated by the the 6 reference means) given all observations. 
 
 
 
@@ -363,58 +380,126 @@ sd()
 
    1. Redo the three tests of the previous section (questions a., b. and c.) for now comparing  the means of all the quantitative variables (see the annex 5 of the ANSES report <ttt>BIOT2009sa0285Ra.pdf</ttt> to know the type of each variable). Store the results (i.e. all the p-values) in a dataframe with one variable per row and four columns (name of the variable + three p-values). 
    All the variables are quantitative except these: BILI, PROT, GLUCOSE, BLOOD, KETONE, UROBILI, GAMMAGT, TESTIS
+
+First we make the functions per question using the Wilcoxon test
 ```{r}
-#test if the mean level of calcium for period 2 is the same for males and females.  </br>**Hint:** plot first the data and justify the test(s) to use.
-question.a <- function(variable){
-  m <- data.study %>% filter(sex == 'M', period == 2) %>% select(variable) %>% na.omit()
-  f <- data.study %>% filter(sex == 'F', period == 2) %>% select(variable) %>% na.omit()
+question.a_wilcox <- function(variable){
+  m <- data.study %>% filter(sex == 'M', period == 2) %>% dplyr::select(variable) %>% na.omit()
+  f <- data.study %>% filter(sex == 'F', period == 2) %>% dplyr::select(variable) %>% na.omit()
+  if (dim(m)[1] > 0 && dim(f)[1]>0){
+    x <- wilcox.test(m[,1], f[,1], alternative = 'two.sided', conf.level=1-0.05)
+    return(x$p.value)
+  }
+  else{
+    return(NA)
+    }
+}
+question.a_wilcox('CALCIUM')
+```
+
+```{r}
+question.b_wilcox <- function(variable){
+  m <- data.study %>% filter(sex == 'M', period == 1) %>% dplyr::select(variable) %>% na.omit()
+  f <- data.study %>% filter(sex == 'M', period == 2) %>% dplyr::select(variable) %>% na.omit()
+  if(dim(m)[1] > 0 && dim(f)[1] > 0){
+    x <- wilcox.test(m[,1], f[,1], alternative = 'two.sided', conf.level=1-0.05)
+    return(x$p.value)
+  }
+  else{
+    return(NA)
+  }
+}
+question.b_wilcox('CALCIUM')
+```
+
+```{r}
+question.c_wilcox <- function(variable){
+  m <- data.study %>% filter(sex == 'M', period == 2,regimen == 'control') %>% dplyr::select(variable) %>% na.omit()
+  f <- data.study %>% filter(sex == 'M', period == 2,regimen == 'MON810') %>% dplyr::select(variable) %>% na.omit()
+  if(dim(m)[1] > 0 && dim(f)[1] > 0){  
   x <- wilcox.test(m[,1], f[,1], alternative = 'two.sided', conf.level=1-0.05)
-  return(x$p.value)
+    return(x$p.value)
+  }
+  else{
+    return(NA)
+  }  
 }
-question.a('CALCIUM')
+question.c_wilcox('CALCIUM')
+```
 
+Now we make all the functions for the same questions using the t-test
+```{r}
+question.a_ttest <- function(variable){
+  alpha<-0.05
+  m <- data.study %>% filter(period == 2, sex=='M') %>% dplyr::select(sex, variable) %>% na.omit
+  f <- data.study %>% filter(period == 2, sex=='F') %>% dplyr::select(sex, variable) %>% na.omit
+  if(dim(m)[1] > 0 && dim(f)[1] > 0){
+    fval <- var.test(m[,2],f[,2], alternative = 'two.sided')$p.val >0.05
+    y <- t.test(m[,2],f[,2], conf.level=1-alpha, var.equal = fval)
+    return(y$p.value)
+  }
+  else{
+    return(NA)
+  } 
+}
+question.a_ttest('CALCIUM')
+```
+
+```{r}
+question.b_ttest <- function(variable){
+  x <- data.study %>% filter(sex == 'M', period == '1') %>% dplyr::select(sex, variable)
+  y <- data.study %>% filter(sex == 'M', period == '2') %>% dplyr::select(sex, variable)
+  if(dim(x)[1] > 0 && dim(y)[1] > 0){
+    fval<-var.test(x$CALCIUM,y$CALCIUM, alternative = 'two.sided')$p.val > 0.05
+    m <- t.test(x$CALCIUM,y$CALCIUM, conf.level = 1-alpha, var.equal = fval)
+    return(m$p.value)
+  }
+  else{
+    return(NA)
+  }
+}
+question.b_ttest('CALCIUM')
+```
+
+```{r}
+question.c_ttest <- function(variable){
+  c <- data.study %>% filter(sex == 'M', period == '2', regimen == 'control')
+  m <- data.study %>% filter(sex == 'M',period == '2', regimen == 'MON810') 
+  if(dim(c)[1] > 0 && dim(m)[1] > 0){
+    fval <- var.test(data.study.cont$CALCIUM, data.study.MON810$CALCIUM,conf.level = 1-alpha)$p.val >0.05
+    r <- t.test(c$CALCIUM, m$CALCIUM, conf.level = 1-alpha, var.equal = FALSE)
+    return(r$p.value)
+  }
+  else{
+    return(NA)
+  }
+}
+question.c_ttest('CALCIUM')
+```
+
+Next we apply these functions to all the other quantitative variables in the table and save the results in a dataframe.
+First we have to make the list of all the column names we want to loop over and use as input for our functions.
+```{r}
+variable <- data.study  %>% dplyr::select(-GLUCOSE, -BLOOD, -BILI, -PROT ,-KETONE, -UROBILI, -GAMMAGT, -TESTIS,-id,-X,-regimen,-sex,-period) %>% colnames()
 ```
 
 
-
 ```{r}
-questionB <- function(variable, data){
-  # Filter the variable for males in period 1 and 2
-  dataNew <- data.study %>% filter(sex == 'M') %>% select(period, variable) %>% na.omit
-  
-  # Calculate F-test's p-value
-  pVal <- var.test((dataNew %>% filter(period == 1))[,2], (dataNew %>% filter(period == 2))[,2], conf.level = 1 - 0.05, alternative = 'two.sided')$p.value
-  
-  # Check if the two periods have equal variances
-  varEqual <- pVal > 0.05
-  
-  # Perform the t-test
-  t.test((dataNew %>% filter(period == 1))[,2], (dataNew %>% filter(period == 2))[,2], conf.level = 1 - 0.05, var.equal = varEqual)$p.value
+wilcox <- data.frame()
+ttest <- data.frame()
+for (i in 1:length(variable)){
+  # Wilcox results
+  wilcox <- rbind(wilcox, cbind(variable[i], question.a_wilcox(variable[i]), question.b_wilcox(variable[i]), question.c_wilcox(variable[i])))
+  # t-test results
+  ttest <- rbind(ttest, cbind(variable[i], question.a_ttest(variable[i]), question.b_ttest(variable[i]), question.c_ttest(variable[i])))
 }
 
-questionB('CALCIUM', data.study)
-```
-
-```{r}
-getp3 <- function(variable){
-alpha=0.05
-variable_period<-data.study %>% filter(period=='2',sex=='M') %>% select(variable,regimen) %>% na.omit()
-x<-variable_period %>% filter(regimen=='control') %>% pull(variable)
-y<-variable_period %>% filter(regimen=='MON810') %>% pull(variable) 
-a=wilcox.test(x,y, alternative="two.sided", conf.level=1-alpha)
-return(a$p.value)
-}
-getp3('CALCIUM')
+colnames(wilcox) <- c('variable', 'a', 'b', 'c')
+colnames(ttest) <- c('variable', 'a', 'b', 'c')
 ```
 
 
-
-
-
 ```{r}
-variable <- data.study  %>% select(-GLUCOSE, -BLOOD, -BILI, -PROT ,-KETONE, -UROBILI, -GAMMAGT, -TESTIS,-id,-X,-regimen,-sex,-period) %>% colnames() 
-variable<- variable %>% as.data.frame()
-
 for (i in 1:10){
   print(question.a(variable[i,]))
 }
