@@ -392,7 +392,7 @@ question.a_wilcox <- function(variable){
   }
   else{
     return(NA)
-    }
+  }
 }
 question.a_wilcox('CALCIUM')
 ```
@@ -409,7 +409,8 @@ question.b_wilcox <- function(variable){
     return(NA)
   }
 }
-question.b_wilcox('CALCIUM')
+
+question.b_wilcox('PTSEC')
 ```
 
 ```{r}
@@ -417,14 +418,14 @@ question.c_wilcox <- function(variable){
   m <- data.study %>% filter(sex == 'M', period == 2,regimen == 'control') %>% dplyr::select(variable) %>% na.omit()
   f <- data.study %>% filter(sex == 'M', period == 2,regimen == 'MON810') %>% dplyr::select(variable) %>% na.omit()
   if(dim(m)[1] > 0 && dim(f)[1] > 0){  
-  x <- wilcox.test(m[,1], f[,1], alternative = 'two.sided', conf.level=1-0.05)
+    x <- wilcox.test(m[,1], f[,1], alternative = 'two.sided', conf.level=1-0.05)
     return(x$p.value)
   }
   else{
     return(NA)
   }  
 }
-question.c_wilcox('CALCIUM')
+question.c_wilcox('OVARY')
 ```
 
 Now we make all the functions for the same questions using the t-test
@@ -447,27 +448,27 @@ question.a_ttest('CALCIUM')
 
 ```{r}
 question.b_ttest <- function(variable){
-  x <- data.study %>% filter(sex == 'M', period == '1') %>% dplyr::select(sex, variable)
-  y <- data.study %>% filter(sex == 'M', period == '2') %>% dplyr::select(sex, variable)
+  x <- data.study %>% filter(sex == 'M', period == '1') %>% dplyr::select(sex, variable) %>% na.omit()
+  y <- data.study %>% filter(sex == 'M', period == '2') %>% dplyr::select(sex, variable) %>% na.omit()
   if(dim(x)[1] > 0 && dim(y)[1] > 0){
-    fval<-var.test(x$CALCIUM,y$CALCIUM, alternative = 'two.sided')$p.val > 0.05
-    m <- t.test(x$CALCIUM,y$CALCIUM, conf.level = 1-alpha, var.equal = fval)
+    fval<-var.test(x[,2],y[,2], alternative = 'two.sided')$p.val > 0.05
+    m <- t.test(x[,2],y[,2], conf.level = 1-0.05, var.equal = fval)
     return(m$p.value)
   }
   else{
     return(NA)
   }
 }
-question.b_ttest('CALCIUM')
+question.b_ttest('PTSEC')
 ```
 
 ```{r}
 question.c_ttest <- function(variable){
-  c <- data.study %>% filter(sex == 'M', period == '2', regimen == 'control')
-  m <- data.study %>% filter(sex == 'M',period == '2', regimen == 'MON810') 
+  c <- data.study %>% filter(sex == 'M', period == '2', regimen == 'control') %>% dplyr::select(regimen, variable) %>% na.omit()
+  m <- data.study %>% filter(sex == 'M',period == '2', regimen == 'MON810') %>% dplyr::select(regimen, variable)%>% na.omit()
   if(dim(c)[1] > 0 && dim(m)[1] > 0){
-    fval <- var.test(data.study.cont$CALCIUM, data.study.MON810$CALCIUM,conf.level = 1-alpha)$p.val >0.05
-    r <- t.test(c$CALCIUM, m$CALCIUM, conf.level = 1-alpha, var.equal = FALSE)
+    fval <- var.test(c[,2], m[,2],conf.level = 1-alpha)$p.val >0.05
+    r <- t.test(c[,2], m[,2], conf.level = 1-alpha, var.equal = FALSE)
     return(r$p.value)
   }
   else{
@@ -480,46 +481,61 @@ question.c_ttest('CALCIUM')
 Next we apply these functions to all the other quantitative variables in the table and save the results in a dataframe.
 First we have to make the list of all the column names we want to loop over and use as input for our functions.
 ```{r}
-variable <- data.study  %>% dplyr::select(-GLUCOSE, -BLOOD, -BILI, -PROT ,-KETONE, -UROBILI, -GAMMAGT, -TESTIS,-id,-X,-regimen,-sex,-period) %>% colnames()
+variable <- data.study  %>% dplyr::select(-GLUCOSE, -BLOOD, -BILI, -PROT ,-KETONE, -UROBILI, -GAMMAGT,-id,-X,-regimen,-sex,-period) %>% colnames()
 ```
 
 
-```{r}
+```{r, warning=FALSE}
 wilcox <- data.frame()
 ttest <- data.frame()
 for (i in 1:length(variable)){
   # Wilcox results
   wilcox <- rbind(wilcox, cbind(variable[i], question.a_wilcox(variable[i]), question.b_wilcox(variable[i]), question.c_wilcox(variable[i])))
   # t-test results
+  #print(cbind(variable[i], question.b_ttest(variable[i])))
   ttest <- rbind(ttest, cbind(variable[i], question.a_ttest(variable[i]), question.b_ttest(variable[i]), question.c_ttest(variable[i])))
 }
 
 colnames(wilcox) <- c('variable', 'a', 'b', 'c')
 colnames(ttest) <- c('variable', 'a', 'b', 'c')
 ```
-
-
-```{r}
-for (i in 1:10){
-  print(question.a(variable[i,]))
-}
-
-for (i in 1:10){
-  print(questionB(variable[i,]))
-}
-
-for (i in 1:10){
-  print(getp3(variable[i,]))
-}
-
-
-result <- apply (variable, 1, function(x) question.a(x))
-
-```
-
-   
+ 
    
    2. For each of the three tests, adjust the p-values using the Bonferroni  and the Benjamini-Hochberg corrections. How can we interpret these results?
+```{r}
+wilcox$variable <- as.character(wilcox$variable)
+wilcox$a <- as.numeric(paste(wilcox$a))
+wilcox$b <- as.numeric(paste(wilcox$b))
+wilcox$c <- as.numeric(paste(wilcox$c))
+
+ttest$variable <- as.character(ttest$variable)
+ttest$a <- as.numeric(paste(ttest$a))
+ttest$b <- as.numeric(paste(ttest$b))
+ttest$c <- as.numeric(paste(ttest$c))
+```
    
+```{r}
+wilcoxBonferroni <- as.data.frame(variable)
+wilcoxBonferroni$`a Bonferroni` <- p.adjust(wilcox$a, method = "bonferroni", n = 60-sum(is.na(wilcox$a)))
+wilcoxBonferroni$`b Bonferroni` <- p.adjust(wilcox$b, method = "bonferroni", n = 60-sum(is.na(wilcox$b)))
+wilcoxBonferroni$`c Bonferroni` <- p.adjust(wilcox$c, method = "bonferroni", n = 60-sum(is.na(wilcox$c)))
+
+ttestBonferroni <- as.data.frame(variable)
+ttestBonferroni$`a Bonferroni` <- p.adjust(ttest$a, method = "bonferroni", n = 60-sum(is.na(ttest$a)))
+ttestBonferroni$`b Bonferroni` <- p.adjust(ttest$b, method = "bonferroni", n = 60-sum(is.na(ttest$b)))
+ttestBonferroni$`c Bonferroni` <- p.adjust(ttest$c, method = "bonferroni", n = 60-sum(is.na(ttest$c)))
+```
+
+```{r}
+wilcoxBH <- as.data.frame(variable)
+wilcoxBH$`a BH` <- p.adjust(wilcox$a, method = "BH", n = 60-sum(is.na(wilcox$a)))
+wilcoxBH$`b BH` <- p.adjust(wilcox$b, method = "BH", n = 60-sum(is.na(wilcox$b)))
+wilcoxBH$`c BH` <- p.adjust(wilcox$c, method = "BH", n = 60-sum(is.na(wilcox$c)))
+
+ttestBH <- as.data.frame(variable)
+ttestBH$`a BH` <- p.adjust(ttest$a, method = "BH", n = 60-sum(is.na(ttest$a)))
+ttestBH$`b BH` <- p.adjust(ttest$b, method = "BH", n = 60-sum(is.na(ttest$b)))
+ttestBH$`c BH` <- p.adjust(ttest$c, method = "BH", n = 60-sum(is.na(ttest$c)))
+```
 
 
