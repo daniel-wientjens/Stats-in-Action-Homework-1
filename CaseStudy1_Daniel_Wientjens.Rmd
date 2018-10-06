@@ -16,6 +16,7 @@ output:
     number_sections: yes
     toc: no
 ---
+These packages are required to run the code
 ```{r}
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load(dplyr, ggplot2, tidyverse, nortest, pwr, equivalence)
@@ -24,7 +25,7 @@ pacman::p_load(dplyr, ggplot2, tidyverse, nortest, pwr, equivalence)
 </br>
 
 
-# Introduction
+#Introduction
 
 The dataset <ttt>dataMON810_2018.csv</ttt> consists of several measurements made during a subchronic toxicity study concerning the MON810 maize.
 
@@ -32,19 +33,14 @@ Biochemical parameters reflecting most physiological functions were measured two
 
 The main objective of this study is to evaluate possible GMO effects on these parameters.
 
-## Single comparison
-##1
-   1. We consider the variable "CALCIUM".
+##Single comparison
+We consider the variable "CALCIUM".
 First we load the data
 ```{r}
 data.study <- read.csv('dataMON810_2018.csv')
-#data.study <- read.csv('/Users/Daniel/Documents/Courses X/Statistics in Action/Homework 1/dataMON810_2018.csv') 
-#data.study <- read.csv('https://github.com/daniel-wientjens/Stats-in-Action-Homework-1/blob/master/dataMON810_2018.csv')
 ```
    
-###a.
-a. test if the mean level of calcium for period 2 is the same for males and females.  </br>**Hint:** plot first the data and justify the test(s) to use.
-
+**a. Test if the mean level of calcium for period 2 is the same for males and females.**  </br>**Hint:** plot first the data and justify the test(s) to use.
 ```{r}
 #Splitting the dataset into the two periods 
 data.study.p1 <- data.study %>% filter(period == 1)
@@ -60,15 +56,17 @@ colnames(new) <- c('sex', 'calcium')
 ggplot()+
   geom_point(data = data.study.p2.m, aes(x=sex, y=CALCIUM, colour = 'blue'), show.legend = F) + 
   geom_point(data = data.study.p2.f, aes(x=sex, y=CALCIUM, colour = 'red'), show.legend = F) +
-  geom_point(data = new, aes(x=sex, y=calcium), size=5, alpha=0.5)
+  geom_point(data = new, aes(x=sex, y=calcium), size=5, alpha=0.5) + 
+  ylab("Calcium Levels") +
+  xlab("Sex")
 
-boxplot(CALCIUM ~ sex, data = data.study.p2, col = "blue")
+boxplot(CALCIUM ~ sex, data = data.study.p2, col = "blue", ylab = "Calcium levels", xlab = "Sex")
 ```
 
 ```{r}
 par(mfrow = c(1, 2))
-hist(data.study.p2.f$CALCIUM, main='Histogram of calcium for females')
-hist(data.study.p2.m$CALCIUM, main='Histogram of calcium for male')
+hist(data.study.p2.f$CALCIUM, main='Histogram of calcium for females', xlab = "Calcium level for females")
+hist(data.study.p2.m$CALCIUM, main='Histogram of calcium for male', xlab = "Calcium level for males")
 ```
 ```{r}
 aggregate(data.study.p2$CALCIUM ~ data.study.p2$sex, FUN= "sd" )
@@ -76,7 +74,7 @@ aggregate(data.study.p2$CALCIUM ~ data.study.p2$sex, FUN= "mean" )
 ```
 After all these plot we have to determine what kind of a distribution we have in front of us. If it is a normal distribution we should use a t-test otherwise we should use a Wilcoxon test.
 So first we check whether the variances differ between the male and female polulation by performing an F-test. 
-Only then we conduct a t-test since we need to know whether to leave the var.equal input at it's default value or to change it to TRUE. 
+Only then we conduct a t-test since we need to know whether to leave the var.equal input at it's default FALSE value or to change it to TRUE. 
 ```{r}
 alpha<-0.05
 
@@ -106,8 +104,7 @@ Also with this test we see that the p value is very small and hence the H0 can b
 So both tests show that the means of calcium levels for males and females in period 2 are the different (since H0 is that they are the same/similar and due to the low p-value we reject H0).
 In the end though, the Wilcoxon test is very much preffered.
 
-###b
-     b. Test for the males if the mean level of calcium is the same for period 1 and period 2.
+**b. Test for the males if the mean level of calcium is the same for period 1 and period 2.**
 
 Here we split the original dataset into the males for period 1 and period 2 and keep only the calcium column in order to do our t-test. But first we plot the boxplot and histogram to check the distribution out.
 ```{r}
@@ -120,14 +117,14 @@ aggregate(y$CALCIUM ~ y$sex, FUN= "sd" )
 ```
 
 ```{r}
-boxplot(CALCIUM ~ period, data = z, col = "blue")
+boxplot(CALCIUM ~ period, data = z, col = "blue", xlab = "Males in period 1", ylab = "Level of Calcium")
 ```
 ```{r}
 par(mfrow = c(1, 2))
-hist(x$CALCIUM, main='Histogram of calcium for males P=1')
-hist(y$CALCIUM, main='Histogram of calcium for males P=2')
+hist(x$CALCIUM, main="Histogram for Males", xlab = "Calcium level of males in period 1")
+hist(y$CALCIUM, main="Histogram for Males", xlab = "Calcium level of males in period 2")
 ```
-As we can see the data seems to have a sort of normal distribution and hence a t-test could be justified.
+</br> As we can see the data seems to have a sort of normal distribution and hence a t-test could be justified.
 Then we perform the F-test for the t-test like before plus we also do the Wilcox test.
 ```{r}
 var.test(x$CALCIUM,y$CALCIUM, alternative = 'two.sided')
@@ -144,7 +141,7 @@ ad.test(y$CALCIUM)
 ```
 
 Next we perform the Wilcoxon test again, since it has less ridged assumptions than the t-test we prefer this test.
-(The t-test assumes that the distribution of the data is normal, whereas with the wilcoxon we don’t make the assumption that the distribution of the data belongs to a family of parametric ditributions)
+(The t-test assumes that the distribution of the data is normal, whereas with the wilcoxon we don’t make the assumption that the distribution of the data belongs to a family of parametric distributions)
 ```{r}
 m <- data.study %>% filter(sex == 'M', period == 1) %>% dplyr::select(CALCIUM) %>% na.omit()
 f <- data.study %>% filter(sex == 'M', period == 2) %>% dplyr::select(CALCIUM) %>% na.omit()
@@ -154,8 +151,8 @@ x
 Here we can agian see and confirm that the p value is close to 0 and hence reject the H0 and say that the means of the control males in period 1 and period 2 is different.
 We prefer the Wilcoxon test over the t-test because we have shown that the data is not normaly distributed.
 
-###c
-     c. test for the males if the mean level of calcium for period 2 is the same for the control group and the MON810 group.
+**c. test for the males if the mean level of calcium for period 2 is the same for the control group and the MON810 group.**
+
 As per usual we split the dataset into the two groups we want to compare, so here we filter them to only contain males from period 2 and have the control group vs the MON810 group.
 Next we perform a F-test to see whether the variances differ between the two groups and use the result for our final t-test.
 
@@ -167,9 +164,9 @@ z <- data.study %>% filter(sex == 'M',period == '2', regimen != 'reference1', re
 
 ```{r}
 par(mfrow = c(1, 3))
-hist(data.study.cont$CALCIUM, main='Histogram of calcium for males P=1')
-hist(data.study.MON810$CALCIUM, main='Histogram of calcium for males P=2')
-boxplot(CALCIUM ~ regimen, data = z, col = "blue")
+hist(data.study.cont$CALCIUM, main='Histogram of Control Group', xlab = "Calcium level of Males of period 2")
+hist(data.study.MON810$CALCIUM, main='Histogram of Test Group',xlab = "Calcium level of Males of period 2")
+boxplot(CALCIUM ~ regimen, data = z, col = "blue", xlab = "Calcium level of males of separate groups", ylab="Frequency", main="Boxplot of Calcium levels")
 ```
 
 
@@ -194,8 +191,7 @@ x
 ```
 Here we get a different p-value than the t-test but both of the p-values signify that we cannot reject the H0 and so the two means of the control and MON810 groups do not differ. As said before, we prefer the Wilcoxon test.
 
-###d
-    d. What is the probability to detect a difference of 1 sd (one standard deviation) with only 10 animals per group? with 20 animal? How can we ensure to detect such difference with a probability of 80%?
+**d. What is the probability to detect a difference of 1 sd (one standard deviation) with only 10 animals per group? with 20 animal? How can we ensure to detect such difference with a probability of 80%?**
 
 So the two groups are comprised of 10 individuals each, so the number of degrees of freedom is 10+10-2=18
 Next for the power of the test should increase by the sample size, but the dt stays the same since delta is the standard deviation and we are dividing the delta by the standard deviation so the result will always be 1
@@ -239,8 +235,7 @@ pwr.t.test(power=0.8, d=1, sig.level=alpha)
 So we have to set n=17 for the probability to be able to detect a difference of 1 standard deviation to be higher than 80%.
 The only problem with running all these pwr.t.test functions is that it assumes that the data are normaly distributed, which is something that we have disproven in previous questions.
 
-###e
-     e. Test for the males if the mean levels of calcium for period 2 of the control group and the MON810 are equivalent. The equivalence limits will be defined using the 6 reference groups as i) one standard deviation of the 6 reference means, ii) two standard deviations of the 6 reference means.
+**e. Test for the males if the mean levels of calcium for period 2 of the control group and the MON810 are equivalent. The equivalence limits will be defined using the 6 reference groups as i) one standard deviation of the 6 reference means, ii) two standard deviations of the 6 reference means.**
      
 First we filter the data
 ```{r}
@@ -276,9 +271,8 @@ So the null hypothesis is not rejected, hence the male means of the calcium leve
 The only problem with running all these tost test functions is that it assumes that the data are normaly distributed, which is something that we have disproven in previous questions.
     
 
-###f     
-     f. Summarize and comment these results.
-So in the end all the data we analyzed was not normaly distributed and hence the way to go was to use the Wilcoxon test. With that said we showed that:
+**f. Summarize and comment these results.** 
+</br> So in the end all the data we analyzed was not normaly distributed and hence the way to go was to use the Wilcoxon test. With that said we showed that:
   -the means of calcium levels for males and females in period 2 are different (Wilcoxon test)
   -the means of calcium of the control males in period 1 and period 2 are different (Wilcoxon test)
   -the two calcium means of the control and MON810 groups do not differ (Wilcoxon test)
@@ -295,11 +289,10 @@ In the end a lot of these tests would have different outcomes if we were to incr
 
   
   
-##2.   
-   2. Do the same analysis with the variable "DIRBILI" (direct bilirubin)
+# Do the same analysis with the variable "DIRBILI" (direct bilirubin)
 
-###a
-a)test if the mean level of calcium for period 2 is the same for males and females. 
+
+**a)test if the mean level of calcium for period 2 is the same for males and females.**
 Hint: plot first the data and justify the test(s) to use.
 
    Here we unfortunately cannot do the same test as before since DIRBILI is discreet data in period 2.
@@ -329,10 +322,12 @@ colnames(new) <- c('sex', 'dirbili')
 ggplot() +
   geom_point(data = dirbili.p2.m, aes(x=sex, y=DIRBILI, colour = 'blue'), show.legend = F) + 
   geom_point(data = dirbili.p2.f, aes(x=sex, y=DIRBILI, colour = 'red'), show.legend = F) +
-  geom_point(data = new, aes(x=sex, y=dirbili), size=5, alpha=0.5)
+  geom_point(data = new, aes(x=sex, y=dirbili), size=5, alpha=0.5) + 
+  xlab("Sex") + 
+  ylab("Dirbili level")
 par(mfrow = c(1, 2))
-hist(dirbili.p2.f$DIRBILI, main='Histogram of DIRBILI for females')
-hist(dirbili.p2.m$DIRBILI, main='Histogram of DIRBILI for male')
+hist(dirbili.p2.f$DIRBILI, main='Histogram of DIRBILI for females', xlab = "Dirbili levels")
+hist(dirbili.p2.m$DIRBILI, main='Histogram of DIRBILI for male', xlab = "Dirbili levels")
 
 ```
 
@@ -354,8 +349,7 @@ x
 ```
 The wilcoxon test does not reject the H0 and comes to the same conclusion as the chi-squared test. The H0 in this case is that there is no difference in the DIRBILI means of males and females in period 2. As before we actually prefer the wilcoxon test to the chi-squared test due to the fact that we are not dealing with according to the paper. Furthermore this is also more in line with the questions of exercise 3.
 
-###b
-b)test for the males if the mean level of dirbili is the same for period 1 and period 2.
+** b) Test for the males if the mean level of dirbili is the same for period 1 and period 2.**
 ```{r}
 new <- aggregate(dirbili$DIRBILI ~ dirbili$period, FUN= "mean") 
 colnames(new) <- c('period', 'dirbili')
@@ -363,11 +357,13 @@ colnames(new) <- c('period', 'dirbili')
 ggplot() +
   geom_point(data = dirbili.p1.m, aes(x=period, y=DIRBILI, colour = period), show.legend = F) + 
   geom_point(data = dirbili.p2.m, aes(x=period, y=DIRBILI, colour = period), show.legend = F) +
-  geom_point(data = new, aes(x=period, y=dirbili), size=5, alpha=0.5)
+  geom_point(data = new, aes(x=period, y=dirbili), size=5, alpha=0.5) +
+  ylab("Dirbili levels") + 
+  xlab("Period")
 
 par(mfrow = c(1, 2))
-hist(dirbili.p1.m$DIRBILI, main='Histogram of DIRBILI for males P=1')
-hist(dirbili.p2.m$DIRBILI, main='Histogram of DIRBILI for males P=2')
+hist(dirbili.p1.m$DIRBILI, main='Histogram of DIRBILI for males P=1', xlab = "Dirbili Levels")
+hist(dirbili.p2.m$DIRBILI, main='Histogram of DIRBILI for males P=2', xlab = "Dirbili Levels")
 ```
 
 
@@ -390,8 +386,8 @@ x
 ```
 The wilcoxon test also rejects the H0 and comes to the same conclusion as the chi-squared test. The H0 is that there is a difference between the male DIRBILI means of period 1 and 2. As before we actually prefer the wilcoxon test to the chi-squared test. This is also more in line with the questions of exercise 3.
 
-###c
-c)test for the males if the mean level of calcium for period 2 is the same for the control group and the MON810 group.
+
+**c)test for the males if the mean level of Dirbili for period 2 is the same for the control group and the MON810 group.**
 ```{r}
 dirbili.cont <- dirbili %>% filter(sex == 'M', period == '2', regimen == 'control')
 dirbili.MON810 <- dirbili %>% filter(sex == 'M',period == '2', regimen == 'MON810') 
@@ -407,12 +403,14 @@ unique(dirbili.p2.m)
 ggplot() +
   geom_point(data = dirbili.p2.m %>% filter(regimen == 'control'), aes(x=regimen, y=DIRBILI, colour = regimen), show.legend = F) + 
   geom_point(data = dirbili.p2.m %>% filter(regimen == 'MON810'), aes(x=regimen, y=DIRBILI, colour = regimen), show.legend = F) +
-  geom_point(data = new, aes(x=regimen, y=dirbili), size=5, alpha=0.5)
+  geom_point(data = new, aes(x=regimen, y=dirbili), size=5, alpha=0.5) + 
+  ylab("Dirbili level") +
+  xlab("Regimen")
 
 
 par(mfrow = c(1, 2))
-hist(dirbili.cont$DIRBILI, main='Histogram of DIRBILI for male control')
-hist(dirbili.MON810$DIRBILI, main='Histogram of DIRBILI for male MON810')
+hist(dirbili.cont$DIRBILI, main='Histogram of DIRBILI for male control', xlab = "Dirbili level")
+hist(dirbili.MON810$DIRBILI, main='Histogram of DIRBILI for male MON810', xlab = "Dirbili level")
 ```
 As we can see here the two means are the same so we perform another chisquared test under the assumption of it being categorical.
 ```{r}
@@ -431,8 +429,8 @@ x <- wilcox.test(m[,1], f[,1], alternative = 'two.sided', conf.level=1-0.05)
 x
 ```
 The wilcoxon test also does not rejects the H0 and comes to the same conclusion as the chi-squared test. As before we actually prefer the wilcoxon test to the chi-squared test. This is also more in line with the questions of exercise 3.
-###d
-d) What is the probability to detect a difference of 1 sd (one standard deviation) with only 10 animals per group? with 20 animal? How can we ensure to detect such difference with a probability of 80%?
+
+**d) What is the probability to detect a difference of 1 sd (one standard deviation) with only 10 animals per group? with 20 animal? How can we ensure to detect such difference with a probability of 80%?**
 
 Here we compare two proportions we use the pwr.2p.test where n=10 individuals per class and h=0.5 
 ```{r}
@@ -454,8 +452,8 @@ pwr.2p.test(power=0.8, h=0.5, sig.level=alpha)
 ```
 So we have to set n=63 for the probability to be able to detect a difference of 1 standard deviation to be higher than 80%.
 
-###e
-e) Test for the males if the mean levels of dirbili for period 2 of the control group and the MON810 are equivalent. The equivalence limits will be defined using the 6 reference groups as i) one standard deviation of the 6 reference means, ii) two standard deviations of the 6 reference means.
+
+**e) Test for the males if the mean levels of dirbili for period 2 of the control group and the MON810 are equivalent. The equivalence limits will be defined using the 6 reference groups as i) one standard deviation of the 6 reference means, ii) two standard deviations of the 6 reference means.**
 
 First we filter the data
 ```{r}
@@ -486,8 +484,7 @@ tost(data.study.MON810$DIRBILI, data.study.cont$DIRBILI, alpha=0.05, epsilon=del
 Now the only difference is that we multiply the delta by 2 since we want to take two sd.
 Here we can say that the p-value is around our significance level so we cannot actually reject the H0 saying that the control and MON810 are not equivalent within 2 standard deviations.
 
-###f
-     f. Summarize and comment these results.
+**f. Summarize and comment these results.**
 So in the end all the data we analyzed was not normaly distributed and hence the way to go was to use the Wilcoxon test. With that said we showed that:
   -the means of DIRBILI levels for males and females in period 2 are not different (Wilcoxon test)
   -the means of DIRBILI of the control males in period 1 and period 2 is different (Wilcoxon test)
@@ -506,9 +503,7 @@ When you want to detect a certain difference between two groups we should use th
 
 
 # Multiple comparisons
-
-#3.1
-   1. Redo the three tests of the previous section (questions a., b. and c.) for now comparing  the means of all the quantitative variables (see the annex 5 of the ANSES report <ttt>BIOT2009sa0285Ra.pdf</ttt> to know the type of each variable). Store the results (i.e. all the p-values) in a dataframe with one variable per row and four columns (name of the variable + three p-values). 
+**a. Redo the three tests of the previous section (questions a., b. and c.) for now comparing  the means of all the quantitative variables (see the annex 5 of the ANSES report <ttt>BIOT2009sa0285Ra.pdf</ttt> to know the type of each variable). Store the results (i.e. all the p-values) in a dataframe with one variable per row and four columns (name of the variable + three p-values). **
 
 First we make the functions per question using the Wilcoxon test
 ```{r}
@@ -629,8 +624,8 @@ colnames(ttest) <- c('variable', 'a', 'b', 'c')
 ```
 We should actually only look at the wilcox dataframe since we have seen in the previous questions that the data so far has not been distributed normaly. So the best test would then be the wilcoxon test as explained previously.
 
-#3.2
-   2. For each of the three tests, adjust the p-values using the Bonferroni  and the Benjamini-Hochberg corrections. How can we interpret these results?
+
+**b. For each of the three tests, adjust the p-values using the Bonferroni  and the Benjamini-Hochberg corrections. How can we interpret these results?**
    
 First we convert the variable column into characters and the pvalue into numeric in order to perform smooth opperations on them.
 ```{r}
